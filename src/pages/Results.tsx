@@ -2,21 +2,83 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { SponsorBanner } from '@/components/SponsorBanner';
 import { useGame } from '@/contexts/GameContext';
-import { Trophy, Star, Award } from 'lucide-react';
+import { Trophy, Star, Award, Medal } from 'lucide-react';
 import { useEffect } from 'react';
 import { useGameMusic } from '@/hooks/useGameMusic';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 export default function Results() {
   const navigate = useNavigate();
-  const { userData, totalPoints, stagePoints, wheelPoints, resetGame } = useGame();
+  const { userData, totalPoints, stagePoints, wheelPoints, resetGame, selectedSponsor } = useGame();
   
   useGameMusic();
 
   useEffect(() => {
     if (!userData) {
       navigate('/register');
+      return;
     }
+    
+    saveGameResult();
   }, [userData, navigate]);
+
+  const saveGameResult = async () => {
+    if (!userData || !selectedSponsor) return;
+
+    try {
+      // Check if player already has a result for this sponsor
+      const { data: existingResults, error: fetchError } = await supabase
+        .from('game_results')
+        .select('id, points')
+        .eq('player_name', userData.name)
+        .eq('sponsor_id', selectedSponsor.id);
+
+      if (fetchError) throw fetchError;
+
+      if (existingResults && existingResults.length > 0) {
+        // Update only if current score is higher
+        const existingResult = existingResults[0];
+        if (totalPoints > existingResult.points) {
+          const { error: updateError } = await supabase
+            .from('game_results')
+            .update({
+              points: totalPoints,
+              completed_at: new Date().toISOString(),
+              player_phone: userData.phone,
+              player_email: userData.email,
+            })
+            .eq('id', existingResult.id);
+
+          if (updateError) throw updateError;
+          toast({
+            title: "Novo recorde!",
+            description: "Sua pontuação foi atualizada no ranking.",
+          });
+        }
+      } else {
+        // Insert new result
+        const { error: insertError } = await supabase
+          .from('game_results')
+          .insert({
+            player_name: userData.name,
+            player_phone: userData.phone,
+            player_email: userData.email,
+            sponsor_id: selectedSponsor.id,
+            points: totalPoints,
+            completed_at: new Date().toISOString(),
+          });
+
+        if (insertError) throw insertError;
+        toast({
+          title: "Resultado salvo!",
+          description: "Sua pontuação foi registrada no ranking.",
+        });
+      }
+    } catch (error) {
+      console.error('Error saving game result:', error);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -77,17 +139,28 @@ export default function Results() {
           </div>
         </div>
 
-        <Button
-          variant="game"
-          size="xl"
-          onClick={() => {
-            resetGame();
-            window.location.href = '/';
-          }}
-          className="w-full"
-        >
-          JOGAR NOVAMENTE
-        </Button>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Button
+            variant="outline"
+            size="xl"
+            onClick={() => navigate('/ranking')}
+            className="w-full"
+          >
+            <Medal className="w-5 h-5 mr-2" />
+            VER RANKING
+          </Button>
+          <Button
+            variant="game"
+            size="xl"
+            onClick={() => {
+              resetGame();
+              window.location.href = '/';
+            }}
+            className="w-full"
+          >
+            JOGAR NOVAMENTE
+          </Button>
+        </div>
       </div>
     </div>
   );

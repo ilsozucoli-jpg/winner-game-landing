@@ -1,8 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { Sparkles, Trophy, Zap } from "lucide-react";
-import winnerLogo from "@/assets/winner-logo.jpg";
+import { useNavigate } from "react-router-dom";
+import winnerBackground from "@/assets/winner-background.jpg";
 
 const Index = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="min-h-screen bg-gradient-radial overflow-hidden relative">
       {/* Animated sparkles background */}
@@ -29,9 +32,9 @@ const Index = () => {
           {/* Logo */}
           <div className="animate-float">
             <img 
-              src={winnerLogo} 
+              src={winnerBackground} 
               alt="Winner Game Logo" 
-              className="w-full max-w-md md:max-w-2xl h-auto shadow-glow-lg rounded-2xl"
+              className="w-full max-w-md md:max-w-2xl h-auto rounded-2xl"
             />
           </div>
 
@@ -49,10 +52,11 @@ const Index = () => {
           <div className="animate-fade-in" style={{ animationDelay: "0.6s" }}>
             <Button 
               size="lg"
+              onClick={() => navigate('/auth')}
               className="font-exo text-xl md:text-2xl px-8 md:px-12 py-6 md:py-8 bg-gradient-gold text-accent-foreground font-black shadow-glow-lg hover:shadow-glow transition-all duration-300 hover:scale-105 rounded-2xl"
             >
               <Zap className="mr-3 h-7 w-7 animate-pulse-glow" />
-              JOGAR AGORA
+              Iniciar Jogo
             </Button>
           </div>
 

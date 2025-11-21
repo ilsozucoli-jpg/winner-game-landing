@@ -225,17 +225,17 @@ export default function AdminPanel() {
         .from('sponsor-logos')
         .getPublicUrl(fileName);
 
-      // Inserir novo patrocinador (não deletar mais o anterior)
+      // Inserir novo patrocinador
       const { error: insertError } = await supabase
         .from('sponsors')
-        .insert({
-          name: sponsorName,
-          city: sponsorCity,
-          prize_count: parseInt(prizeCount),
+        .insert([{
+          name: sponsorName.trim(),
+          city: sponsorCity.trim(),
+          prize_count: parseInt(prizeCount) || 1,
           logo_url: publicUrl,
-          prize_description: prizeDescription,
-          phone,
-        });
+          prize_description: prizeDescription.trim(),
+          phone: phone.trim(),
+        }]);
 
       if (insertError) throw insertError;
 

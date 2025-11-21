@@ -165,10 +165,10 @@ export function Minesweeper({ onComplete, timeLeft }: MinesweeperProps) {
   };
 
   const getCellColor = (cell: Cell) => {
-    if (cell.state === 'hidden') return 'bg-muted hover:bg-muted/80';
+    if (cell.state === 'hidden') return 'bg-blue-200 hover:bg-blue-300';
     if (cell.state === 'flagged') return 'bg-destructive/20';
     if (cell.hasBomb) return 'bg-destructive';
-    return 'bg-background';
+    return 'bg-green-200';
   };
 
   const getNumberColor = (num: number) => {

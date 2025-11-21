@@ -58,7 +58,7 @@ export default function Auth() {
         if (email === 'admin@hotmail.com' || email === 'zucoli@hotmail.com') {
           navigate('/admin');
         } else {
-          navigate('/');
+          navigate('/sponsor-selection');
         }
       } else {
         const { error } = await supabase.auth.signUp({

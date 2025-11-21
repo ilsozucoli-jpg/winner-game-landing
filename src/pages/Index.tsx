@@ -11,8 +11,8 @@ const Index = () => {
     const { data: { session } } = await supabase.auth.getSession();
     
     if (session) {
-      // Usuário está logado, vai para a primeira etapa do jogo
-      navigate('/stage/1');
+      // Usuário está logado, vai para seleção de patrocinador
+      navigate('/sponsor-selection');
     } else {
       // Usuário não está logado, vai para tela de login
       navigate('/auth');

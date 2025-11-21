@@ -1,10 +1,23 @@
 import { Button } from "@/components/ui/button";
 import { Sparkles, Trophy, Zap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import winnerBackground from "@/assets/winner-background.jpg";
 
 const Index = () => {
   const navigate = useNavigate();
+
+  const handleStartGame = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (session) {
+      // Usuário está logado, vai para a primeira etapa do jogo
+      navigate('/stage/1');
+    } else {
+      // Usuário não está logado, vai para tela de login
+      navigate('/auth');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-white overflow-hidden relative">
@@ -52,7 +65,7 @@ const Index = () => {
           <div className="animate-fade-in" style={{ animationDelay: "0.6s" }}>
             <Button 
               size="lg"
-              onClick={() => navigate('/auth')}
+              onClick={handleStartGame}
               className="font-exo text-xl md:text-2xl px-8 md:px-12 py-6 md:py-8 bg-success text-success-foreground font-black rounded-3xl animate-pulse-scale hover:brightness-110 transition-all duration-300"
             >
               <Zap className="mr-3 h-7 w-7" />

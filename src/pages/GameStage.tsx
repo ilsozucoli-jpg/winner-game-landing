@@ -115,7 +115,7 @@ export default function GameStage() {
             ) : stageNumber === 2 ? (
               <TicTacToe 
                 onComplete={handleChallengeComplete} 
-                timeLimit={30}
+                timeLimit={60}
               />
             ) : (
               <div className="bg-card border border-border rounded-lg p-8 space-y-6 animate-slide-up">

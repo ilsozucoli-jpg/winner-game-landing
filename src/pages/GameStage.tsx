@@ -7,6 +7,7 @@ import { WheelOfFortune } from '@/components/WheelOfFortune';
 import { MovingTargets } from '@/components/MovingTargets';
 import { ArcheryGame } from '@/components/ArcheryGame';
 import { TicTacToe } from '@/components/TicTacToe';
+import { ColorSequence } from '@/components/ColorSequence';
 import { useGame } from '@/contexts/GameContext';
 import { useToast } from '@/hooks/use-toast';
 import { Timer, Target } from 'lucide-react';
@@ -116,6 +117,11 @@ export default function GameStage() {
               <TicTacToe 
                 onComplete={handleChallengeComplete} 
                 timeLimit={60}
+              />
+            ) : stageNumber === 3 ? (
+              <ColorSequence 
+                onComplete={handleChallengeComplete} 
+                timeLimit={20}
               />
             ) : (
               <div className="bg-card border border-border rounded-lg p-8 space-y-6 animate-slide-up">

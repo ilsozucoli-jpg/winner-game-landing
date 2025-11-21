@@ -6,9 +6,21 @@ interface UserData {
   email: string;
 }
 
+interface Sponsor {
+  id: string;
+  name: string;
+  city: string;
+  logo_url: string;
+  prize_description: string;
+  phone: string;
+  prize_count: number;
+}
+
 interface GameContextType {
   userData: UserData | null;
   setUserData: (data: UserData) => void;
+  selectedSponsor: Sponsor | null;
+  setSelectedSponsor: (sponsor: Sponsor) => void;
   totalPoints: number;
   addPoints: (points: number) => void;
   currentStage: number;
@@ -24,6 +36,7 @@ const GameContext = createContext<GameContextType | undefined>(undefined);
 
 export function GameProvider({ children }: { children: ReactNode }) {
   const [userData, setUserData] = useState<UserData | null>(null);
+  const [selectedSponsor, setSelectedSponsor] = useState<Sponsor | null>(null);
   const [totalPoints, setTotalPoints] = useState(0);
   const [currentStage, setCurrentStage] = useState(0);
   const [stagePoints, setStagePoints] = useState<number[]>([0, 0, 0, 0, 0]);
@@ -61,6 +74,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
       value={{
         userData,
         setUserData,
+        selectedSponsor,
+        setSelectedSponsor,
         totalPoints,
         addPoints,
         currentStage,

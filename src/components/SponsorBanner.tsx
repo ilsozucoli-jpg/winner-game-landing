@@ -1,38 +1,10 @@
-import { useState, useEffect } from 'react';
-import { Building2, Phone } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-
-interface Sponsor {
-  logo_url: string;
-  prize_description: string;
-  phone: string;
-}
+import { Building2, Phone, MapPin, Award } from 'lucide-react';
+import { useGame } from '@/contexts/GameContext';
 
 export function SponsorBanner() {
-  const [sponsor, setSponsor] = useState<Sponsor | null>(null);
+  const { selectedSponsor } = useGame();
 
-  useEffect(() => {
-    loadSponsor();
-  }, []);
-
-  const loadSponsor = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('sponsors')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-
-      if (!error && data) {
-        setSponsor(data);
-      }
-    } catch (error) {
-      console.error('Erro ao carregar patrocinador:', error);
-    }
-  };
-
-  if (!sponsor) {
+  if (!selectedSponsor) {
     return (
       <div className="bg-card border border-border rounded-lg p-4 mb-4">
         <div className="flex items-center gap-4">
@@ -41,7 +13,7 @@ export function SponsorBanner() {
           </div>
           <div className="flex-1">
             <h3 className="font-bold text-sm text-foreground">Patrocinador Oficial</h3>
-            <p className="text-xs text-muted-foreground mt-1">Aguardando cadastro</p>
+            <p className="text-xs text-muted-foreground mt-1">Aguardando seleção</p>
           </div>
         </div>
       </div>
@@ -53,17 +25,29 @@ export function SponsorBanner() {
       <div className="flex items-center gap-4">
         <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
           <img 
-            src={sponsor.logo_url} 
-            alt="Logo do Patrocinador" 
+            src={selectedSponsor.logo_url} 
+            alt={selectedSponsor.name}
             className="w-full h-full object-contain"
           />
         </div>
         <div className="flex-1">
-          <h3 className="font-bold text-sm text-foreground">Patrocinador Oficial</h3>
-          <p className="text-xs text-muted-foreground mt-1">Prêmio: {sponsor.prize_description}</p>
+          <h3 className="font-bold text-sm text-foreground">{selectedSponsor.name}</h3>
           <div className="flex items-center gap-1 mt-1">
-            <Phone className="w-3 h-3 text-primary" />
-            <span className="text-xs text-primary font-semibold">{sponsor.phone}</span>
+            <MapPin className="w-3 h-3 text-primary" />
+            <span className="text-xs text-muted-foreground">{selectedSponsor.city}</span>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">Prêmio: {selectedSponsor.prize_description}</p>
+          <div className="flex items-center gap-3 mt-1">
+            <div className="flex items-center gap-1">
+              <Phone className="w-3 h-3 text-primary" />
+              <span className="text-xs text-primary font-semibold">{selectedSponsor.phone}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Award className="w-3 h-3 text-primary" />
+              <span className="text-xs text-foreground font-semibold">
+                {selectedSponsor.prize_count} {selectedSponsor.prize_count === 1 ? 'prêmio' : 'prêmios'}
+              </span>
+            </div>
           </div>
         </div>
       </div>

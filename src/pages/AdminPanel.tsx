@@ -16,6 +16,9 @@ export default function AdminPanel() {
   const [loading, setLoading] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [sponsorName, setSponsorName] = useState('');
+  const [sponsorCity, setSponsorCity] = useState('');
+  const [prizeCount, setPrizeCount] = useState('1');
   const [prizeDescription, setPrizeDescription] = useState('');
   const [phone, setPhone] = useState('');
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -184,6 +187,24 @@ export default function AdminPanel() {
       return;
     }
 
+    if (!sponsorName.trim()) {
+      toast({
+        title: "Erro",
+        description: "Por favor, digite o nome do patrocinador.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!sponsorCity.trim()) {
+      toast({
+        title: "Erro",
+        description: "Por favor, digite a cidade do patrocinador.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -204,13 +225,13 @@ export default function AdminPanel() {
         .from('sponsor-logos')
         .getPublicUrl(fileName);
 
-      // Deletar patrocinador anterior (se existir)
-      await supabase.from('sponsors').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-
-      // Inserir novo patrocinador
+      // Inserir novo patrocinador (não deletar mais o anterior)
       const { error: insertError } = await supabase
         .from('sponsors')
         .insert({
+          name: sponsorName,
+          city: sponsorCity,
+          prize_count: parseInt(prizeCount),
           logo_url: publicUrl,
           prize_description: prizeDescription,
           phone,
@@ -223,7 +244,14 @@ export default function AdminPanel() {
         description: "Patrocinador cadastrado com sucesso.",
       });
 
-      navigate('/');
+      // Limpar formulário
+      setSponsorName('');
+      setSponsorCity('');
+      setPrizeCount('1');
+      setPrizeDescription('');
+      setPhone('');
+      setLogoFile(null);
+      setLogoPreview('');
     } catch (error: any) {
       toast({
         title: "Erro",
@@ -547,6 +575,40 @@ export default function AdminPanel() {
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Nome do Patrocinador</label>
+                    <Input
+                      type="text"
+                      value={sponsorName}
+                      onChange={(e) => setSponsorName(e.target.value)}
+                      placeholder="Nome da empresa"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Cidade</label>
+                    <Input
+                      type="text"
+                      value={sponsorCity}
+                      onChange={(e) => setSponsorCity(e.target.value)}
+                      placeholder="Ex: São Paulo"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Quantidade de Prêmios</label>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={prizeCount}
+                      onChange={(e) => setPrizeCount(e.target.value)}
+                      placeholder="1"
+                      required
+                    />
+                  </div>
+
                   <div>
                     <label className="block text-sm font-medium mb-2">Logo do Patrocinador</label>
                     <div className="space-y-4">
@@ -908,7 +970,7 @@ export default function AdminPanel() {
                   <p className="text-center text-muted-foreground p-8">Nenhum patrocinador cadastrado</p>
                 ) : (
                   <div className="space-y-4">
-                    {sponsors.map((sponsor) => (
+                    {sponsors.map((sponsor: any) => (
                       <div key={sponsor.id} className="border border-border rounded-lg p-4">
                         <div className="flex items-start gap-4">
                           <div className="w-20 h-20 bg-muted rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
@@ -919,7 +981,10 @@ export default function AdminPanel() {
                             />
                           </div>
                           <div className="flex-1">
-                            <p className="font-medium text-foreground">Prêmio: {sponsor.prize_description}</p>
+                            <p className="font-bold text-lg text-foreground">{sponsor.name || 'Nome não cadastrado'}</p>
+                            <p className="text-sm text-muted-foreground mt-1">Cidade: {sponsor.city || 'Não informada'}</p>
+                            <p className="text-sm text-muted-foreground">Prêmios: {sponsor.prize_count || 1}</p>
+                            <p className="font-medium text-foreground mt-2">Prêmio: {sponsor.prize_description}</p>
                             <p className="text-sm text-muted-foreground mt-1">Telefone: {sponsor.phone}</p>
                             <p className="text-xs text-muted-foreground mt-1">
                               Cadastrado em: {new Date(sponsor.created_at).toLocaleDateString('pt-BR')}
@@ -941,10 +1006,11 @@ export default function AdminPanel() {
                       </div>
                     ))}
                   </div>
-                )}
-              </CardContent>
-            </Card>
-        )}
+                )
+              }
+            </CardContent>
+          </Card>
+      )}
 
         {activeSection === 'shortcuts' && (
           <Card>

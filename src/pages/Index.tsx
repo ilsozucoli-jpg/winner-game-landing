@@ -20,20 +20,20 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white overflow-hidden relative">
+    <div className="min-h-screen bg-gradient-purple-light overflow-hidden relative">
       {/* Animated sparkles background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(20)].map((_, i) => (
+        {[...Array(30)].map((_, i) => (
           <div
             key={i}
             className="absolute animate-sparkle"
             style={{
               left: `${Math.random() * 100}%`,
               top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 2}s`,
+              animationDelay: `${Math.random() * 3}s`,
             }}
           >
-            <Sparkles className="w-4 h-4 text-gold" />
+            <Sparkles className="w-5 h-5 text-yellow-300 drop-shadow-[0_0_8px_rgba(253,224,71,0.8)]" />
           </div>
         ))}
       </div>

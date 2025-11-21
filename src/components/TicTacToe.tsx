@@ -22,7 +22,7 @@ export function TicTacToe({ onComplete, timeLimit }: TicTacToeProps) {
   const [wins, setWins] = useState(0);
   const [timeLeft, setTimeLeft] = useState(timeLimit);
   const [gameOver, setGameOver] = useState(false);
-  const [message, setMessage] = useState('Ganhe 3 vezes em 30 segundos!');
+  const [message, setMessage] = useState('Ganhe 3 vezes em 60 segundos!');
   const [winningLine, setWinningLine] = useState<number[] | null>(null);
 
   // Timer countdown
@@ -101,6 +101,16 @@ export function TicTacToe({ onComplete, timeLimit }: TicTacToeProps) {
     setWinningLine(null);
   }, []);
 
+  const restartGame = () => {
+    setBoard(Array(9).fill(null));
+    setIsPlayerTurn(true);
+    setWinningLine(null);
+    setWins(0);
+    setTimeLeft(timeLimit);
+    setGameOver(false);
+    setMessage('Ganhe 3 vezes em 60 segundos!');
+  };
+
   const handleCellClick = (index: number) => {
     if (!isPlayerTurn || board[index] || gameOver) return;
 
@@ -169,9 +179,9 @@ export function TicTacToe({ onComplete, timeLimit }: TicTacToeProps) {
         </h2>
         
         <div className="flex items-center justify-center gap-4">
-          <div className="bg-muted rounded-lg p-3 flex items-center gap-2">
-            <Timer className="w-5 h-5 text-primary" />
-            <span className="text-2xl font-bold text-foreground">{timeLeft}s</span>
+          <div className="bg-success/20 rounded-lg p-3 flex items-center gap-2">
+            <Timer className="w-5 h-5 text-success" />
+            <span className="text-2xl font-bold text-success">{timeLeft}s</span>
           </div>
           
           <div className="bg-gradient-success rounded-lg p-3 flex items-center gap-2 shadow-success">
@@ -210,10 +220,21 @@ export function TicTacToe({ onComplete, timeLimit }: TicTacToeProps) {
         </div>
       </div>
 
-      <div className="text-center">
+      <div className="text-center space-y-4">
         <p className="text-sm text-muted-foreground">
           Você joga com <X className="inline w-4 h-4 text-primary" /> • Computador joga com <Circle className="inline w-4 h-4 text-destructive" />
         </p>
+        
+        {gameOver && wins < 3 && (
+          <Button
+            onClick={restartGame}
+            variant="game"
+            size="lg"
+            className="w-full"
+          >
+            🔄 Reiniciar Jogo da Velha
+          </Button>
+        )}
       </div>
     </div>
   );

@@ -49,22 +49,30 @@ export default function GameStage() {
     setIsTimerRunning(true);
   };
 
-  const handleChallengeComplete = () => {
+  const handleChallengeComplete = (success: boolean = true) => {
     setIsTimerRunning(false);
     
-    // Calcula pontos: pontos base mais bônus por tempo restante
-    const basePoints = STAGE_BASE_POINTS[stageNumber];
-    const timeBonus = Math.floor((30 - timer) * 5); // 5 pontos por segundo restante
-    const totalPoints = Math.max(basePoints + timeBonus, basePoints);
-    
-    addPoints(totalPoints);
-    addStagePoints(stageNumber, totalPoints);
-    
-    toast({
-      title: "🎯 Etapa Concluída!",
-      description: `Você ganhou ${totalPoints} pontos! Tempo: ${timer}s`,
-      className: "bg-success text-success-foreground",
-    });
+    if (success) {
+      // Calcula pontos: pontos base mais bônus por tempo restante
+      const basePoints = STAGE_BASE_POINTS[stageNumber];
+      const timeBonus = Math.floor((30 - timer) * 5); // 5 pontos por segundo restante
+      const totalPoints = Math.max(basePoints + timeBonus, basePoints);
+      
+      addPoints(totalPoints);
+      addStagePoints(stageNumber, totalPoints);
+      
+      toast({
+        title: "🎯 Etapa Concluída!",
+        description: `Você ganhou ${totalPoints} pontos! Tempo: ${timer}s`,
+        className: "bg-success text-success-foreground",
+      });
+    } else {
+      toast({
+        title: "Etapa Não Concluída",
+        description: "Você não pontuou nesta etapa. Continue para a próxima!",
+        className: "bg-muted text-muted-foreground",
+      });
+    }
 
     seteChallengeComplete(true);
   };
@@ -121,7 +129,7 @@ export default function GameStage() {
             ) : stageNumber === 3 ? (
               <ColorSequence 
                 onComplete={handleChallengeComplete} 
-                timeLimit={20}
+                timeLimit={30}
               />
             ) : (
               <div className="bg-card border border-border rounded-lg p-8 space-y-6 animate-slide-up">
@@ -150,7 +158,7 @@ export default function GameStage() {
                   <Button
                     variant="success"
                     size="xl"
-                    onClick={handleChallengeComplete}
+                    onClick={() => handleChallengeComplete(true)}
                     className="w-full"
                   >
                     COMPLETAR ETAPA

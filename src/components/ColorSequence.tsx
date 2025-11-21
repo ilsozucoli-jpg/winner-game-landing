@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Timer, Eye, EyeOff } from 'lucide-react';
 
 interface ColorSequenceProps {
-  onComplete: () => void;
+  onComplete: (success: boolean) => void;
   timeLimit: number;
 }
 
@@ -33,12 +33,12 @@ export function ColorSequence({ onComplete, timeLimit }: ColorSequenceProps) {
     const newSequence = Array(5).fill(0).map(() => Math.floor(Math.random() * COLORS.length));
     setSequence(newSequence);
 
-    // Show sequence for 3 seconds then hide
+    // Show sequence for 5 seconds then hide
     const timer = setTimeout(() => {
       setShowSequence(false);
       setShowingSequence(false);
       setMessage('Recrie a sequência!');
-    }, 3000);
+    }, 5000);
 
     return () => clearTimeout(timer);
   }, []);
@@ -83,7 +83,6 @@ export function ColorSequence({ onComplete, timeLimit }: ColorSequenceProps) {
         if (newAttempts >= 4) {
           setGameOver(true);
           setMessage('❌ 4 tentativas esgotadas! Você não somou pontos.');
-          setTimeout(() => onComplete(), 2000);
         } else {
           setMessage(`❌ Errado! Tentativa ${newAttempts}/4`);
         }
@@ -91,7 +90,6 @@ export function ColorSequence({ onComplete, timeLimit }: ColorSequenceProps) {
         // Correct sequence!
         setGameOver(true);
         setMessage('🎉 Parabéns! Sequência correta!');
-        setTimeout(() => onComplete(), 2000);
       }
     }
   }, [playerSequence, sequence, gameOver, showingSequence, attempts, onComplete]);
@@ -191,11 +189,16 @@ export function ColorSequence({ onComplete, timeLimit }: ColorSequenceProps) {
         </div>
       )}
 
-      {gameOver && attempts >= 4 && (
+      {gameOver && (
         <div className="text-center space-y-4">
-          <p className="text-muted-foreground">
-            Você usou todas as tentativas. Continue para a próxima etapa!
-          </p>
+          <Button
+            variant="game"
+            size="xl"
+            onClick={() => onComplete(playerSequence.length === sequence.length)}
+            className="w-full"
+          >
+            {playerSequence.length === sequence.length ? 'PRÓXIMA ETAPA' : 'IR PARA ETAPA 5'}
+          </Button>
         </div>
       )}
     </div>

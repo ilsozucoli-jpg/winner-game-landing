@@ -6,6 +6,7 @@ import { PointsDisplay } from '@/components/PointsDisplay';
 import { WheelOfFortune } from '@/components/WheelOfFortune';
 import { MovingTargets } from '@/components/MovingTargets';
 import { ArcheryGame } from '@/components/ArcheryGame';
+import { TicTacToe } from '@/components/TicTacToe';
 import { useGame } from '@/contexts/GameContext';
 import { useToast } from '@/hooks/use-toast';
 import { Timer, Target } from 'lucide-react';
@@ -108,6 +109,11 @@ export default function GameStage() {
               />
             ) : stageNumber === 1 ? (
               <ArcheryGame 
+                onComplete={handleChallengeComplete} 
+                timeLimit={30}
+              />
+            ) : stageNumber === 2 ? (
+              <TicTacToe 
                 onComplete={handleChallengeComplete} 
                 timeLimit={30}
               />

@@ -56,6 +56,7 @@ export default {
         'gradient-primary': 'var(--gradient-primary)',
         'gradient-success': 'var(--gradient-success)',
         'gradient-warning': 'var(--gradient-warning)',
+        'gradient-purple-light': 'var(--gradient-purple-light)',
       },
       boxShadow: {
         'glow': 'var(--shadow-glow)',
@@ -104,6 +105,24 @@ export default {
           "0%, 100%": { transform: "scale(1)" },
           "50%": { transform: "scale(1.05)" },
         },
+        "sparkle": {
+          "0%, 100%": { 
+            opacity: "0",
+            transform: "scale(0) rotate(0deg)"
+          },
+          "50%": { 
+            opacity: "1",
+            transform: "scale(1) rotate(180deg)"
+          },
+        },
+        "float": {
+          "0%, 100%": { 
+            transform: "translateY(0px)"
+          },
+          "50%": { 
+            transform: "translateY(-20px)"
+          },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -113,6 +132,8 @@ export default {
         "bounce-in": "bounce-in 0.5s ease-out",
         "slide-up": "slide-up 0.5s ease-out",
         "pulse-scale": "pulse-scale 2s ease-in-out infinite",
+        "sparkle": "sparkle 3s ease-in-out infinite",
+        "float": "float 3s ease-in-out infinite",
       },
     },
   },

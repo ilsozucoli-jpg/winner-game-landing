@@ -7,7 +7,7 @@ const Index = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gradient-radial overflow-hidden relative">
+    <div className="min-h-screen bg-white overflow-hidden relative">
       {/* Animated sparkles background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {[...Array(20)].map((_, i) => (
@@ -53,9 +53,9 @@ const Index = () => {
             <Button 
               size="lg"
               onClick={() => navigate('/auth')}
-              className="font-exo text-xl md:text-2xl px-8 md:px-12 py-6 md:py-8 bg-gradient-gold text-accent-foreground font-black shadow-glow-lg hover:shadow-glow transition-all duration-300 hover:scale-105 rounded-2xl"
+              className="font-exo text-xl md:text-2xl px-8 md:px-12 py-6 md:py-8 bg-success text-success-foreground font-black rounded-3xl animate-pulse-scale hover:brightness-110 transition-all duration-300"
             >
-              <Zap className="mr-3 h-7 w-7 animate-pulse-glow" />
+              <Zap className="mr-3 h-7 w-7" />
               Iniciar Jogo
             </Button>
           </div>

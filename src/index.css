@@ -58,11 +58,6 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply text-foreground;
-    background-image: url('/src/assets/winner-background.jpg');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    background-attachment: fixed;
+    @apply bg-background text-foreground;
   }
 }

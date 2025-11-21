@@ -8,6 +8,7 @@ import { MovingTargets } from '@/components/MovingTargets';
 import { ArcheryGame } from '@/components/ArcheryGame';
 import { TicTacToe } from '@/components/TicTacToe';
 import { ColorSequence } from '@/components/ColorSequence';
+import { Minesweeper } from '@/components/Minesweeper';
 import { useGame } from '@/contexts/GameContext';
 import { useToast } from '@/hooks/use-toast';
 import { Timer, Target } from 'lucide-react';
@@ -77,6 +78,29 @@ export default function GameStage() {
     seteChallengeComplete(true);
   };
 
+  const handleMinesweeperComplete = (score: number) => {
+    setIsTimerRunning(false);
+    
+    if (score > 0) {
+      addPoints(score);
+      addStagePoints(stageNumber, score);
+      
+      toast({
+        title: "🎯 Etapa Concluída!",
+        description: `Você ganhou ${score} pontos!`,
+        className: "bg-success text-success-foreground",
+      });
+    } else {
+      toast({
+        title: "Etapa Não Concluída",
+        description: "Você não pontuou nesta etapa. Continue para a próxima!",
+        className: "bg-muted text-muted-foreground",
+      });
+    }
+
+    seteChallengeComplete(true);
+  };
+
   const handleNextStage = () => {
     if (stageNumber < 4) {
       navigate(`/stage/${stageNumber + 2}`);
@@ -131,41 +155,12 @@ export default function GameStage() {
                 onComplete={handleChallengeComplete} 
                 timeLimit={30}
               />
-            ) : (
-              <div className="bg-card border border-border rounded-lg p-8 space-y-6 animate-slide-up">
-                <div className="text-center space-y-4">
-                  <Target className="w-16 h-16 text-primary mx-auto" />
-                  <h2 className="text-2xl font-bold text-foreground">Desafio da Etapa {stageNumber + 1}</h2>
-                  
-                  <div className="bg-muted rounded-lg p-4 flex items-center justify-center gap-2">
-                    <Timer className="w-6 h-6 text-primary" />
-                    <span className="text-3xl font-bold text-foreground">{timer}s</span>
-                  </div>
-
-                  <p className="text-muted-foreground">
-                    Complete o desafio o mais rápido possível para ganhar mais pontos!
-                  </p>
-
-                  <div className="bg-background rounded-lg p-6 my-6">
-                    <p className="text-lg text-foreground mb-4">
-                      🎯 Clique no botão abaixo para completar esta etapa!
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Pontos base: {STAGE_BASE_POINTS[stageNumber]} / tempo gasto
-                    </p>
-                  </div>
-
-                  <Button
-                    variant="success"
-                    size="xl"
-                    onClick={() => handleChallengeComplete(true)}
-                    className="w-full"
-                  >
-                    COMPLETAR ETAPA
-                  </Button>
-                </div>
-              </div>
-            )}
+            ) : stageNumber === 4 ? (
+              <Minesweeper 
+                onComplete={handleMinesweeperComplete} 
+                timeLeft={60 - timer}
+              />
+            ) : null}
           </>
         )}
 

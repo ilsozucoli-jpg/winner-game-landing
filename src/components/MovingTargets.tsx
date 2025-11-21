@@ -1,0 +1,142 @@
+import { useState, useEffect, useCallback } from 'react';
+import { Target } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+
+interface MovingTargetsProps {
+  onComplete: () => void;
+  timeLimit: number;
+}
+
+interface TargetData {
+  id: number;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  isReal: boolean;
+}
+
+export function MovingTargets({ onComplete, timeLimit }: MovingTargetsProps) {
+  const [targets, setTargets] = useState<TargetData[]>([]);
+  const [timeLeft, setTimeLeft] = useState(timeLimit);
+  const [gameOver, setGameOver] = useState(false);
+  const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    // Criar 5 alvos, apenas 1 verdadeiro
+    const realTargetIndex = Math.floor(Math.random() * 5);
+    const newTargets: TargetData[] = [];
+    
+    for (let i = 0; i < 5; i++) {
+      newTargets.push({
+        id: i,
+        x: Math.random() * 70 + 10,
+        y: Math.random() * 60 + 10,
+        vx: (Math.random() - 0.5) * 2,
+        vy: (Math.random() - 0.5) * 2,
+        isReal: i === realTargetIndex,
+      });
+    }
+    setTargets(newTargets);
+  }, []);
+
+  useEffect(() => {
+    if (gameOver) return;
+
+    const timer = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          setGameOver(true);
+          setMessage('⏰ Tempo esgotado!');
+          setTimeout(onComplete, 2000);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [gameOver, onComplete]);
+
+  useEffect(() => {
+    if (gameOver) return;
+
+    const interval = setInterval(() => {
+      setTargets(prev => prev.map(target => {
+        let newX = target.x + target.vx;
+        let newY = target.y + target.vy;
+        let newVx = target.vx;
+        let newVy = target.vy;
+
+        if (newX <= 5 || newX >= 90) {
+          newVx = -target.vx;
+          newX = Math.max(5, Math.min(90, newX));
+        }
+        if (newY <= 5 || newY >= 85) {
+          newVy = -target.vy;
+          newY = Math.max(5, Math.min(85, newY));
+        }
+
+        return { ...target, x: newX, y: newY, vx: newVx, vy: newVy };
+      }));
+    }, 50);
+
+    return () => clearInterval(interval);
+  }, [gameOver]);
+
+  const handleTargetClick = useCallback((target: TargetData) => {
+    if (gameOver) return;
+    
+    if (target.isReal) {
+      setGameOver(true);
+      setMessage('🎯 Alvo correto! Parabéns!');
+      setTimeout(onComplete, 2000);
+    } else {
+      setMessage('❌ Alvo falso! Tente novamente!');
+      setTimeout(() => setMessage(''), 1500);
+    }
+  }, [gameOver, onComplete]);
+
+  return (
+    <div className="bg-card border border-border rounded-lg p-6 space-y-4">
+      <div className="text-center space-y-2">
+        <h2 className="text-2xl font-bold text-foreground">Acerte o Alvo Verdadeiro!</h2>
+        <div className="flex items-center justify-center gap-4">
+          <div className="bg-destructive/20 text-destructive px-4 py-2 rounded-lg">
+            <span className="text-3xl font-bold">{timeLeft}s</span>
+          </div>
+        </div>
+        {message && (
+          <p className="text-lg font-bold animate-bounce-in">{message}</p>
+        )}
+      </div>
+
+      <div className="relative bg-background border-2 border-primary/20 rounded-lg overflow-hidden" style={{ height: '400px' }}>
+        {targets.map(target => (
+          <Button
+            key={target.id}
+            variant="ghost"
+            size="icon"
+            disabled={gameOver}
+            onClick={() => handleTargetClick(target)}
+            className="absolute transition-none hover:scale-110"
+            style={{
+              left: `${target.x}%`,
+              top: `${target.y}%`,
+              transform: 'translate(-50%, -50%)',
+            }}
+          >
+            <Target 
+              className={`w-12 h-12 ${target.isReal ? 'text-success' : 'text-destructive'}`}
+              fill="currentColor"
+            />
+          </Button>
+        ))}
+      </div>
+
+      <p className="text-sm text-muted-foreground text-center">
+        Apenas um alvo é verdadeiro! Os outros são falsos.
+      </p>
+    </div>
+  );
+}

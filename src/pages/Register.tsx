@@ -8,6 +8,7 @@ import { SponsorBanner } from '@/components/SponsorBanner';
 import { useGame } from '@/contexts/GameContext';
 import { useToast } from '@/hooks/use-toast';
 import { Trophy, Settings, LogOut } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function Register() {
   const navigate = useNavigate();
@@ -15,6 +16,8 @@ export default function Register() {
   const { toast } = useToast();
   const [user, setUser] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [hasError, setHasError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -35,13 +38,19 @@ export default function Register() {
 
     setUser(session.user);
 
+    // Verificar se é zucoli@hotmail.com e redirecionar para admin
+    if (session.user.email === 'zucoli@hotmail.com') {
+      navigate('/admin');
+      return;
+    }
+
     // Verificar se é admin
     const { data } = await supabase
       .from('user_roles')
       .select('role')
       .eq('user_id', session.user.id)
       .eq('role', 'admin')
-      .single();
+      .maybeSingle();
 
     setIsAdmin(!!data);
 
@@ -50,7 +59,7 @@ export default function Register() {
       .from('profiles')
       .select('*')
       .eq('id', session.user.id)
-      .single();
+      .maybeSingle();
 
     if (profile?.name) {
       setUserData({ 
@@ -70,8 +79,11 @@ export default function Register() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setHasError(false);
     
     if (!formData.name || !formData.phone || !formData.email) {
+      setHasError(true);
+      setErrorMessage("Por favor, preencha todos os campos.");
       toast({
         title: "Campos obrigatórios",
         description: "Por favor, preencha todos os campos.",
@@ -104,12 +116,18 @@ export default function Register() {
       });
       navigate('/stage/1');
     } catch (error: any) {
+      setHasError(true);
+      setErrorMessage(error.message || "Erro ao realizar cadastro");
       toast({
         title: "Erro",
         description: error.message,
         variant: "destructive",
       });
     }
+  };
+
+  const handleSkipRegistration = () => {
+    navigate('/stage/1');
   };
 
   const handleLogout = async () => {
@@ -144,6 +162,12 @@ export default function Register() {
 
         <div className="bg-card border border-border rounded-lg p-6 space-y-6">
           <h2 className="text-2xl font-bold text-foreground text-center">Cadastro</h2>
+          
+          {hasError && (
+            <Alert variant="destructive">
+              <AlertDescription>{errorMessage}</AlertDescription>
+            </Alert>
+          )}
           
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
@@ -185,6 +209,18 @@ export default function Register() {
             <Button type="submit" variant="game" size="lg" className="w-full">
               COMEÇAR JOGO
             </Button>
+
+            {hasError && (
+              <Button
+                type="button"
+                variant="success"
+                size="lg"
+                onClick={handleSkipRegistration}
+                className="w-full"
+              >
+                Seguir sem Cadastro
+              </Button>
+            )}
 
             <Button
               type="button"

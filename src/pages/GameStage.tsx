@@ -199,16 +199,6 @@ export default function GameStage() {
           </div>
         )}
 
-        {userData?.name === 'Admin (Teste)' && (
-          <div className="flex justify-center">
-            <Button
-              variant="outline"
-              onClick={() => navigate('/admin')}
-            >
-              Voltar ao Painel Admin
-            </Button>
-          </div>
-        )}
       </div>
     </div>
   );

@@ -19,7 +19,7 @@ export default function GameStage() {
   const { stage } = useParams<{ stage: string }>();
   const stageNumber = parseInt(stage || '1') - 1;
   const navigate = useNavigate();
-  const { addPoints, addStagePoints, userData } = useGame();
+  const { addPoints, addStagePoints, userData, setUserData, setSelectedSponsor } = useGame();
   const { toast } = useToast();
   
   const [showWheel, setShowWheel] = useState(true);
@@ -29,10 +29,28 @@ export default function GameStage() {
   const [challengeComplete, seteChallengeComplete] = useState(false);
 
   useEffect(() => {
-    if (!userData) {
+    // Check for test mode
+    const testMode = localStorage.getItem('testMode');
+    const testSponsor = localStorage.getItem('testSponsor');
+    
+    if (testMode === 'true' && testSponsor) {
+      // Set test user data
+      setUserData({
+        name: 'Admin (Teste)',
+        phone: '00000000000',
+        email: 'admin@teste.com'
+      });
+      
+      // Set test sponsor
+      setSelectedSponsor(JSON.parse(testSponsor));
+      
+      // Clear test mode flag
+      localStorage.removeItem('testMode');
+      localStorage.removeItem('testSponsor');
+    } else if (!userData) {
       navigate('/register');
     }
-  }, [userData, navigate]);
+  }, [userData, navigate, setUserData, setSelectedSponsor]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -177,6 +195,17 @@ export default function GameStage() {
               className="w-full"
             >
               {stageNumber < 4 ? 'PRÓXIMA ETAPA' : 'VER RESULTADOS'}
+            </Button>
+          </div>
+        )}
+
+        {userData?.name === 'Admin (Teste)' && (
+          <div className="flex justify-center">
+            <Button
+              variant="outline"
+              onClick={() => navigate('/admin')}
+            >
+              Voltar ao Painel Admin
             </Button>
           </div>
         )}

@@ -123,7 +123,14 @@ export default function SponsorSelection() {
               Não há patrocinadores cadastrados no momento.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-3">
+            <Button
+              variant="game"
+              onClick={() => navigate('/stage/1')}
+              className="w-full"
+            >
+              Continuar sem Patrocinador
+            </Button>
             <Button
               variant="outline"
               onClick={() => navigate('/')}

@@ -14,7 +14,77 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      game_results: {
+        Row: {
+          completed_at: string
+          created_at: string
+          id: string
+          player_email: string
+          player_name: string
+          player_phone: string
+          points: number
+          sponsor_id: string
+        }
+        Insert: {
+          completed_at?: string
+          created_at?: string
+          id?: string
+          player_email: string
+          player_name: string
+          player_phone: string
+          points?: number
+          sponsor_id: string
+        }
+        Update: {
+          completed_at?: string
+          created_at?: string
+          id?: string
+          player_email?: string
+          player_name?: string
+          player_phone?: string
+          points?: number
+          sponsor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_results_sponsor_id_fkey"
+            columns: ["sponsor_id"]
+            isOneToOne: false
+            referencedRelation: "sponsors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sponsors: {
+        Row: {
+          created_at: string
+          id: string
+          logo_url: string | null
+          name: string | null
+          phone: string
+          prize_description: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          name?: string | null
+          phone: string
+          prize_description: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          name?: string | null
+          phone?: string
+          prize_description?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

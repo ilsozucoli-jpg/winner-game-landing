@@ -53,7 +53,7 @@ export function Footer() {
         variant="ghost"
         size="sm"
         onClick={() => setShowLogoutDialog(true)}
-        className="fixed bottom-6 right-6 gap-2 opacity-50 hover:opacity-100 transition-opacity bg-background/80 backdrop-blur-sm border border-border shadow-lg"
+        className="fixed top-6 right-6 gap-2 opacity-50 hover:opacity-100 transition-opacity bg-background/80 backdrop-blur-sm border border-border shadow-lg"
       >
         <LogOut className="w-4 h-4" />
         Sair

@@ -950,33 +950,105 @@ export default function AdminPanel() {
           <Card>
             <CardHeader>
               <CardTitle>Atalhos para Etapas</CardTitle>
-              <CardDescription>Navegue diretamente para qualquer etapa do jogo</CardDescription>
+              <CardDescription>Navegue diretamente para qualquer etapa do jogo (modo teste)</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-4">
                 <Button
-                  onClick={() => navigate('/stage/2')}
+                  onClick={async () => {
+                    const { data: sponsorData } = await supabase
+                      .from('sponsors')
+                      .select('*')
+                      .limit(1)
+                      .maybeSingle();
+                    
+                    if (sponsorData) {
+                      localStorage.setItem('testMode', 'true');
+                      localStorage.setItem('testSponsor', JSON.stringify(sponsorData));
+                      navigate('/stage/2');
+                    } else {
+                      toast({
+                        title: "Erro",
+                        description: "Cadastre um patrocinador primeiro",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
                   className="bg-gradient-primary text-primary-foreground h-16"
                   size="lg"
                 >
                   Ir para Etapa 2
                 </Button>
                 <Button
-                  onClick={() => navigate('/stage/3')}
+                  onClick={async () => {
+                    const { data: sponsorData } = await supabase
+                      .from('sponsors')
+                      .select('*')
+                      .limit(1)
+                      .maybeSingle();
+                    
+                    if (sponsorData) {
+                      localStorage.setItem('testMode', 'true');
+                      localStorage.setItem('testSponsor', JSON.stringify(sponsorData));
+                      navigate('/stage/3');
+                    } else {
+                      toast({
+                        title: "Erro",
+                        description: "Cadastre um patrocinador primeiro",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
                   className="bg-gradient-success text-success-foreground h-16"
                   size="lg"
                 >
                   Ir para Etapa 3
                 </Button>
                 <Button
-                  onClick={() => navigate('/stage/4')}
+                  onClick={async () => {
+                    const { data: sponsorData } = await supabase
+                      .from('sponsors')
+                      .select('*')
+                      .limit(1)
+                      .maybeSingle();
+                    
+                    if (sponsorData) {
+                      localStorage.setItem('testMode', 'true');
+                      localStorage.setItem('testSponsor', JSON.stringify(sponsorData));
+                      navigate('/stage/4');
+                    } else {
+                      toast({
+                        title: "Erro",
+                        description: "Cadastre um patrocinador primeiro",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
                   className="bg-gradient-primary text-primary-foreground h-16"
                   size="lg"
                 >
                   Ir para Etapa 4
                 </Button>
                 <Button
-                  onClick={() => navigate('/stage/5')}
+                  onClick={async () => {
+                    const { data: sponsorData } = await supabase
+                      .from('sponsors')
+                      .select('*')
+                      .limit(1)
+                      .maybeSingle();
+                    
+                    if (sponsorData) {
+                      localStorage.setItem('testMode', 'true');
+                      localStorage.setItem('testSponsor', JSON.stringify(sponsorData));
+                      navigate('/stage/5');
+                    } else {
+                      toast({
+                        title: "Erro",
+                        description: "Cadastre um patrocinador primeiro",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
                   className="bg-gradient-success text-success-foreground h-16"
                   size="lg"
                 >

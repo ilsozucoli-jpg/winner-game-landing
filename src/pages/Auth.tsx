@@ -15,19 +15,35 @@ export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session) {
-        // Não redirecionar automaticamente aqui, deixar o handleAuth controlar
-        if (session.user.email !== 'admin@hotmail.com') {
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', session.user.id)
+          .eq('role', 'admin')
+          .single();
+
+        if (roleData) {
+          navigate('/admin');
+        } else {
           navigate('/');
         }
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session && event === 'SIGNED_IN') {
-        // Não redirecionar automaticamente aqui, deixar o handleAuth controlar
-        if (session.user.email !== 'admin@hotmail.com') {
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', session.user.id)
+          .eq('role', 'admin')
+          .single();
+
+        if (roleData) {
+          navigate('/admin');
+        } else {
           navigate('/');
         }
       }
@@ -42,7 +58,7 @@ export default function Auth() {
 
     try {
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
@@ -54,11 +70,20 @@ export default function Auth() {
           description: "Bem-vindo de volta!",
         });
 
-        // Redirecionar para admin se for o email de administrador
-        if (email === 'admin@hotmail.com' || email === 'zucoli@hotmail.com') {
-          navigate('/admin');
-        } else {
-          navigate('/sponsor-selection');
+        // Verificar se o usuário é admin consultando a tabela user_roles
+        if (data.user) {
+          const { data: roleData } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', data.user.id)
+            .eq('role', 'admin')
+            .single();
+
+          if (roleData) {
+            navigate('/admin');
+          } else {
+            navigate('/sponsor-selection');
+          }
         }
       } else {
         const { error } = await supabase.auth.signUp({

@@ -143,11 +143,6 @@ export default function AdminPanel() {
         .single();
 
       if (error || !data) {
-        toast({
-          title: "Acesso negado",
-          description: "Você não tem permissão para acessar esta página.",
-          variant: "destructive",
-        });
         navigate('/');
         return;
       }

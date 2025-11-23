@@ -20,7 +20,7 @@ export function WheelOfFortune({ onComplete, stage }: { onComplete: () => void; 
     const spins = 5 + Math.floor(Math.random() * 5);
     const segmentAngle = 360 / WHEEL_VALUES.length;
     const randomSegment = Math.floor(Math.random() * WHEEL_VALUES.length);
-    const finalRotation = (spins * 360) + (randomSegment * segmentAngle);
+    const finalRotation = rotation + (spins * 360) + (randomSegment * segmentAngle);
     
     setRotation(finalRotation);
 

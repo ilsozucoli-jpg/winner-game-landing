@@ -18,6 +18,8 @@ export default function AdminPanel() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [prizeDescription, setPrizeDescription] = useState('');
   const [phone, setPhone] = useState('');
+  const [prizeCount, setPrizeCount] = useState('1');
+  const [promotionEndDate, setPromotionEndDate] = useState('');
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState('');
   const [newUserEmail, setNewUserEmail] = useState('');
@@ -206,6 +208,8 @@ export default function AdminPanel() {
           logo_url: publicUrl,
           prize_description: prizeDescription.trim(),
           phone: phone.trim(),
+          prize_count: parseInt(prizeCount) || 1,
+          promotion_end_date: promotionEndDate ? new Date(promotionEndDate).toISOString() : null,
         }]);
 
       if (insertError) throw insertError;
@@ -218,6 +222,8 @@ export default function AdminPanel() {
       // Limpar formulário
       setPrizeDescription('');
       setPhone('');
+      setPrizeCount('1');
+      setPromotionEndDate('');
       setLogoFile(null);
       setLogoPreview('');
     } catch (error: any) {
@@ -580,6 +586,31 @@ export default function AdminPanel() {
                       placeholder="(11) 99999-9999"
                       required
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Quantidade de Prêmios</label>
+                    <Input
+                      type="number"
+                      value={prizeCount}
+                      onChange={(e) => setPrizeCount(e.target.value)}
+                      placeholder="1"
+                      min="1"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Data e Horário Final da Promoção</label>
+                    <Input
+                      type="datetime-local"
+                      value={promotionEndDate}
+                      onChange={(e) => setPromotionEndDate(e.target.value)}
+                      placeholder="Data final"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Deixe em branco se não houver data limite
+                    </p>
                   </div>
 
                   <div className="flex gap-4">

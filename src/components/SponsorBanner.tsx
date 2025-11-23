@@ -1,5 +1,7 @@
-import { Building2, Phone, MapPin, Award } from 'lucide-react';
+import { Building2, Phone, MapPin, Award, Calendar, Clock } from 'lucide-react';
 import { useGame } from '@/contexts/GameContext';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 export function SponsorBanner() {
   const { selectedSponsor } = useGame();
@@ -37,7 +39,7 @@ export function SponsorBanner() {
             <span className="text-xs text-muted-foreground">{selectedSponsor.city}</span>
           </div>
           <p className="text-xs text-muted-foreground mt-1">Prêmio: {selectedSponsor.prize_description}</p>
-          <div className="flex items-center gap-3 mt-1">
+          <div className="flex items-center gap-3 mt-1 flex-wrap">
             <div className="flex items-center gap-1">
               <Phone className="w-3 h-3 text-primary" />
               <span className="text-xs text-primary font-semibold">{selectedSponsor.phone}</span>
@@ -48,6 +50,14 @@ export function SponsorBanner() {
                 {selectedSponsor.prize_count} {selectedSponsor.prize_count === 1 ? 'prêmio' : 'prêmios'}
               </span>
             </div>
+            {selectedSponsor.promotion_end_date && (
+              <div className="flex items-center gap-1">
+                <Clock className="w-3 h-3 text-primary" />
+                <span className="text-xs text-foreground font-semibold">
+                  Até {format(new Date(selectedSponsor.promotion_end_date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </div>

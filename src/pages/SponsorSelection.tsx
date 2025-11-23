@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Building2, MapPin, Award, Loader2 } from 'lucide-react';
+import { Building2, MapPin, Award, Loader2, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useGame } from '@/contexts/GameContext';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 interface Sponsor {
   id: string;
@@ -15,6 +17,7 @@ interface Sponsor {
   prize_description: string;
   phone: string;
   prize_count: number;
+  promotion_end_date?: string | null;
 }
 
 export default function SponsorSelection() {
@@ -66,10 +69,18 @@ export default function SponsorSelection() {
         logo_url: s.logo_url,
         prize_description: s.prize_description,
         phone: s.phone,
-        prize_count: s.prize_count || 1
+        prize_count: s.prize_count || 1,
+        promotion_end_date: s.promotion_end_date
       }));
       
-      setSponsors(sponsorsWithDefaults);
+      // Filtrar patrocinadores que não estão com promoção expirada
+      const now = new Date();
+      const activeSponsors = sponsorsWithDefaults.filter((s: any) => {
+        if (!s.promotion_end_date) return true; // Sem data limite, sempre ativo
+        return new Date(s.promotion_end_date) > now; // Apenas se data futura
+      });
+      
+      setSponsors(activeSponsors);
     } catch (error: any) {
       toast({
         title: "Erro ao carregar patrocinadores",
@@ -182,6 +193,12 @@ export default function SponsorSelection() {
                   <Award className="w-4 h-4 text-primary" />
                   <span>{sponsor.prize_count} {sponsor.prize_count === 1 ? 'prêmio' : 'prêmios'}</span>
                 </div>
+                {sponsor.promotion_end_date && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Clock className="w-4 h-4 text-primary" />
+                    <span>Até {format(new Date(sponsor.promotion_end_date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
+                  </div>
+                )}
                 <div className="pt-2 border-t border-border">
                   <p className="text-sm text-foreground font-medium">
                     {sponsor.prize_description}

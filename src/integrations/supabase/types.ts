@@ -89,7 +89,9 @@ export type Database = {
           logo_url: string | null
           name: string | null
           phone: string
+          prize_count: number
           prize_description: string
+          promotion_end_date: string | null
           updated_at: string
         }
         Insert: {
@@ -98,7 +100,9 @@ export type Database = {
           logo_url?: string | null
           name?: string | null
           phone: string
+          prize_count?: number
           prize_description: string
+          promotion_end_date?: string | null
           updated_at?: string
         }
         Update: {
@@ -107,7 +111,9 @@ export type Database = {
           logo_url?: string | null
           name?: string | null
           phone?: string
+          prize_count?: number
           prize_description?: string
+          promotion_end_date?: string | null
           updated_at?: string
         }
         Relationships: []

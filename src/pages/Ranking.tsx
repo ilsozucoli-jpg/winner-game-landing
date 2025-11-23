@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Trophy, ArrowLeft, Home } from 'lucide-react';
+import { Trophy, ArrowLeft, Home, Building2 } from 'lucide-react';
 import { useGame } from '@/contexts/GameContext';
 import { supabase } from '@/integrations/supabase/client';
 import { SponsorBanner } from '@/components/SponsorBanner';
@@ -147,7 +147,7 @@ export default function Ranking() {
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Button
             variant="outline"
             size="xl"
@@ -156,6 +156,15 @@ export default function Ranking() {
           >
             <ArrowLeft className="w-5 h-5 mr-2" />
             VOLTAR
+          </Button>
+          <Button
+            variant="outline"
+            size="xl"
+            onClick={() => navigate('/sponsor-selection')}
+            className="w-full"
+          >
+            <Building2 className="w-5 h-5 mr-2" />
+            OUTRO PATROCINADOR
           </Button>
           <Button
             variant="game"

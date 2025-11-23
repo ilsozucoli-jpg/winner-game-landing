@@ -73,14 +73,30 @@ export default function SponsorSelection() {
         promotion_end_date: s.promotion_end_date
       }));
       
-      // Filtrar patrocinadores que não estão com promoção expirada
+      // Separar patrocinadores ativos e expirados
       const now = new Date();
-      const activeSponsors = sponsorsWithDefaults.filter((s: any) => {
-        if (!s.promotion_end_date) return true; // Sem data limite, sempre ativo
-        return new Date(s.promotion_end_date) > now; // Apenas se data futura
+      const activeSponsors: Sponsor[] = [];
+      const expiredSponsors: Sponsor[] = [];
+      
+      sponsorsWithDefaults.forEach((s: Sponsor) => {
+        if (!s.promotion_end_date) {
+          activeSponsors.push(s); // Sem data limite, sempre ativo
+        } else if (new Date(s.promotion_end_date) > now) {
+          activeSponsors.push(s); // Data futura, ainda ativo
+        } else {
+          expiredSponsors.push(s); // Data passada, expirado
+        }
       });
       
-      setSponsors(activeSponsors);
+      // Ordenar expirados por data decrescente (mais recente primeiro)
+      expiredSponsors.sort((a, b) => {
+        if (!a.promotion_end_date) return 1;
+        if (!b.promotion_end_date) return -1;
+        return new Date(b.promotion_end_date).getTime() - new Date(a.promotion_end_date).getTime();
+      });
+      
+      // Concatenar ativos primeiro, depois expirados
+      setSponsors([...activeSponsors, ...expiredSponsors]);
     } catch (error: any) {
       toast({
         title: "Erro ao carregar patrocinadores",
@@ -114,6 +130,16 @@ export default function SponsorSelection() {
     } finally {
       setSelecting(false);
     }
+  };
+
+  const handleViewRanking = (sponsor: Sponsor) => {
+    setSelectedSponsor(sponsor);
+    navigate('/ranking');
+  };
+
+  const isSponsorExpired = (sponsor: Sponsor) => {
+    if (!sponsor.promotion_end_date) return false;
+    return new Date(sponsor.promotion_end_date) <= new Date();
   };
 
   if (loading) {
@@ -168,59 +194,74 @@ export default function SponsorSelection() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {sponsors.map((sponsor) => (
-            <Card 
-              key={sponsor.id}
-              className="hover:shadow-lg transition-shadow cursor-pointer group"
-              onClick={() => !selecting && handleSelectSponsor(sponsor)}
-            >
-              <CardHeader>
-                <div className="w-full h-32 bg-muted rounded-lg flex items-center justify-center overflow-hidden mb-4">
-                  <img 
-                    src={sponsor.logo_url} 
-                    alt={sponsor.name}
-                    className="w-full h-full object-contain group-hover:scale-105 transition-transform"
-                  />
-                </div>
-                <CardTitle className="text-xl">{sponsor.name}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <MapPin className="w-4 h-4 text-primary" />
-                  <span>{sponsor.city}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Award className="w-4 h-4 text-primary" />
-                  <span>{sponsor.prize_count} {sponsor.prize_count === 1 ? 'prêmio' : 'prêmios'}</span>
-                </div>
-                {sponsor.promotion_end_date && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Clock className="w-4 h-4 text-primary" />
-                    <span>Até {format(new Date(sponsor.promotion_end_date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
+          {sponsors.map((sponsor) => {
+            const isExpired = isSponsorExpired(sponsor);
+            return (
+              <Card 
+                key={sponsor.id}
+                className={`hover:shadow-lg transition-shadow group ${isExpired ? 'opacity-60' : ''}`}
+              >
+                <CardHeader>
+                  <div className="w-full h-32 bg-muted rounded-lg flex items-center justify-center overflow-hidden mb-4">
+                    <img 
+                      src={sponsor.logo_url} 
+                      alt={sponsor.name}
+                      className="w-full h-full object-contain group-hover:scale-105 transition-transform"
+                    />
                   </div>
-                )}
-                <div className="pt-2 border-t border-border">
-                  <p className="text-sm text-foreground font-medium">
-                    {sponsor.prize_description}
-                  </p>
-                </div>
-                <Button
-                  variant="game"
-                  className="w-full mt-4"
-                  disabled={selecting}
-                >
-                  {selecting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Selecionando...
-                    </>
-                  ) : (
-                    'Selecionar'
+                  <CardTitle className="text-xl">{sponsor.name}</CardTitle>
+                  {isExpired && (
+                    <p className="text-sm text-destructive font-medium">Promoção Encerrada</p>
                   )}
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <MapPin className="w-4 h-4 text-primary" />
+                    <span>{sponsor.city}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Award className="w-4 h-4 text-primary" />
+                    <span>{sponsor.prize_count} {sponsor.prize_count === 1 ? 'prêmio' : 'prêmios'}</span>
+                  </div>
+                  {sponsor.promotion_end_date && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Clock className="w-4 h-4 text-primary" />
+                      <span>Até {format(new Date(sponsor.promotion_end_date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
+                    </div>
+                  )}
+                  <div className="pt-2 border-t border-border">
+                    <p className="text-sm text-foreground font-medium">
+                      {sponsor.prize_description}
+                    </p>
+                  </div>
+                  <div className="space-y-2 mt-4">
+                    <Button
+                      variant="game"
+                      className="w-full"
+                      disabled={selecting || isExpired}
+                      onClick={() => handleSelectSponsor(sponsor)}
+                    >
+                      {selecting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Selecionando...
+                        </>
+                      ) : (
+                        'Selecionar'
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => handleViewRanking(sponsor)}
+                    >
+                      Ver Ranking
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       </div>
     </div>

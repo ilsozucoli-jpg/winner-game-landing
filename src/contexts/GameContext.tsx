@@ -14,6 +14,7 @@ interface Sponsor {
   prize_description: string;
   phone: string;
   prize_count: number;
+  promotion_end_date?: string | null;
 }
 
 interface GameContextType {

@@ -71,13 +71,25 @@ export default function CreatePromotion() {
     setLoading(true);
 
     try {
+      // Get current session first
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('Sessão não encontrada');
+      }
+
+      // Verify sponsor is approved before proceeding
+      if (sponsorData.status !== 'approved') {
+        throw new Error('Seu cadastro precisa estar aprovado para cadastrar promoções');
+      }
+
       let logoUrl = null;
 
       // Upload logo if provided
       if (logoFile) {
         const fileExt = logoFile.name.split('.').pop();
         const fileName = `${Math.random()}.${fileExt}`;
-        const { error: uploadError, data } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
           .from('sponsor-logos')
           .upload(fileName, logoFile);
 
@@ -91,12 +103,6 @@ export default function CreatePromotion() {
       }
 
       // Insert sponsor data
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        throw new Error('Sessão não encontrada');
-      }
-
       const { error } = await supabase
         .from('sponsors')
         .insert({
@@ -109,7 +115,10 @@ export default function CreatePromotion() {
           promotion_end_date: formData.promotion_end_date,
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao inserir promoção:', error);
+        throw new Error(error.message || 'Erro ao cadastrar promoção');
+      }
 
       toast({
         title: "Sucesso!",

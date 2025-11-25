@@ -8,7 +8,9 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Upload, UserPlus, Trash2 } from 'lucide-react';
 import { createAdminUser } from '@/lib/adminUtils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Settings, Users, UserX, Key, List, Zap } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Settings, Users, UserX, Key, List, Zap, Store, CheckCircle, XCircle } from 'lucide-react';
 
 export default function AdminPanel() {
   const navigate = useNavigate();
@@ -40,7 +42,11 @@ export default function AdminPanel() {
   const [sponsors, setSponsors] = useState<any[]>([]);
   const [loadingSponsors, setLoadingSponsors] = useState(false);
   const [deletingSponsor, setDeletingSponsor] = useState(false);
-  const [activeSection, setActiveSection] = useState<'sponsor' | 'users' | 'delete' | 'password' | 'list' | 'shortcuts' | 'sponsors-list'>('sponsor');
+  const [sponsorRegistrations, setSponsorRegistrations] = useState<any[]>([]);
+  const [loadingSponsorRegistrations, setLoadingSponsorRegistrations] = useState(false);
+  const [selectedRegistration, setSelectedRegistration] = useState<any | null>(null);
+  const [approvingRegistration, setApprovingRegistration] = useState(false);
+  const [activeSection, setActiveSection] = useState<'sponsor' | 'users' | 'delete' | 'password' | 'list' | 'shortcuts' | 'sponsors-list' | 'registrations'>('sponsor');
 
   useEffect(() => {
     checkAdminStatus();
@@ -94,6 +100,59 @@ export default function AdminPanel() {
       });
     } finally {
       setLoadingSponsors(false);
+    }
+  };
+
+  const loadSponsorRegistrations = async () => {
+    setLoadingSponsorRegistrations(true);
+    try {
+      const { data, error } = await supabase
+        .from('sponsor_registrations')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setSponsorRegistrations(data || []);
+    } catch (error: any) {
+      toast({
+        title: "Erro ao carregar cadastros",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingSponsorRegistrations(false);
+    }
+  };
+
+  const handleApproveRegistration = async (registrationId: string, approve: boolean) => {
+    if (!confirm(`Tem certeza que deseja ${approve ? 'aprovar' : 'rejeitar'} este cadastro?`)) {
+      return;
+    }
+
+    setApprovingRegistration(true);
+    try {
+      const { error } = await supabase
+        .from('sponsor_registrations')
+        .update({ status: approve ? 'approved' : 'rejected' })
+        .eq('id', registrationId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso!",
+        description: `Cadastro ${approve ? 'aprovado' : 'rejeitado'} com sucesso.`,
+      });
+
+      setSelectedRegistration(null);
+      loadSponsorRegistrations();
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setApprovingRegistration(false);
     }
   };
 
@@ -504,6 +563,7 @@ export default function AdminPanel() {
   const menuButtons = [
     { id: 'sponsor', label: 'Patrocinador', icon: Settings, color: 'bg-blue-500 hover:bg-blue-600' },
     { id: 'sponsors-list', label: 'Lista Patrocinadores', icon: Users, color: 'bg-indigo-500 hover:bg-indigo-600' },
+    { id: 'registrations', label: 'Promotores Cadastrados', icon: Store, color: 'bg-orange-500 hover:bg-orange-600' },
     { id: 'users', label: 'Criar Admin', icon: UserPlus, color: 'bg-green-500 hover:bg-green-600' },
     { id: 'delete', label: 'Excluir Usuário', icon: UserX, color: 'bg-red-500 hover:bg-red-600' },
     { id: 'password', label: 'Mudar Senha', icon: Key, color: 'bg-amber-500 hover:bg-amber-600' },
@@ -530,6 +590,7 @@ export default function AdminPanel() {
                   setActiveSection(button.id as any);
                   if (button.id === 'list') loadUsers();
                   if (button.id === 'sponsors-list') loadSponsors();
+                  if (button.id === 'registrations') loadSponsorRegistrations();
                 }}
                 className={`${button.color} text-white h-24 flex flex-col items-center justify-center gap-2 transition-all`}
                 size="lg"
@@ -976,6 +1037,189 @@ export default function AdminPanel() {
             </CardContent>
           </Card>
       )}
+
+        {activeSection === 'registrations' && (
+          <>
+            <Card>
+              <CardHeader>
+                <CardTitle>Promotores Cadastrados</CardTitle>
+                <CardDescription>
+                  Lista de cadastros de promotores pendentes ou processados
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loadingSponsorRegistrations ? (
+                  <div className="flex justify-center p-8">
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                  </div>
+                ) : sponsorRegistrations.length === 0 ? (
+                  <p className="text-center text-muted-foreground p-8">Nenhum cadastro encontrado</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Nome</TableHead>
+                          <TableHead>Endereço</TableHead>
+                          <TableHead>Cidade</TableHead>
+                          <TableHead>UF</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Ações</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {sponsorRegistrations.map((registration: any) => (
+                          <TableRow key={registration.id}>
+                            <TableCell className="font-medium">{registration.name}</TableCell>
+                            <TableCell>{registration.address}</TableCell>
+                            <TableCell>{registration.city}</TableCell>
+                            <TableCell>{registration.state}</TableCell>
+                            <TableCell>
+                              <span className={`px-2 py-1 text-xs rounded ${
+                                registration.status === 'approved' 
+                                  ? 'bg-green-500/10 text-green-500'
+                                  : registration.status === 'rejected'
+                                  ? 'bg-red-500/10 text-red-500'
+                                  : 'bg-yellow-500/10 text-yellow-500'
+                              }`}>
+                                {registration.status === 'approved' ? 'Aprovado' : 
+                                 registration.status === 'rejected' ? 'Rejeitado' : 'Pendente'}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => setSelectedRegistration(registration)}
+                              >
+                                Ver Detalhes
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Dialog open={!!selectedRegistration} onOpenChange={(open) => !open && setSelectedRegistration(null)}>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Detalhes do Cadastro</DialogTitle>
+                  <DialogDescription>
+                    Informações completas do promotor cadastrado
+                  </DialogDescription>
+                </DialogHeader>
+                {selectedRegistration && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Nome</label>
+                        <p className="text-foreground">{selectedRegistration.name}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Empresa</label>
+                        <p className="text-foreground">{selectedRegistration.company}</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Cidade</label>
+                        <p className="text-foreground">{selectedRegistration.city}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Estado</label>
+                        <p className="text-foreground">{selectedRegistration.state}</p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Endereço Completo</label>
+                      <p className="text-foreground">{selectedRegistration.address}</p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Plano</label>
+                        <p className="text-foreground">{selectedRegistration.plan}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Valor</label>
+                        <p className="text-foreground">R$ {selectedRegistration.plan_value}</p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Status</label>
+                      <p className={`font-medium ${
+                        selectedRegistration.status === 'approved' 
+                          ? 'text-green-500'
+                          : selectedRegistration.status === 'rejected'
+                          ? 'text-red-500'
+                          : 'text-yellow-500'
+                      }`}>
+                        {selectedRegistration.status === 'approved' ? 'Aprovado' : 
+                         selectedRegistration.status === 'rejected' ? 'Rejeitado' : 'Pendente'}
+                      </p>
+                    </div>
+
+                    {selectedRegistration.payment_proof_url && (
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Comprovante de Pagamento</label>
+                        <div className="mt-2 border rounded-lg p-4 bg-muted/50">
+                          <img 
+                            src={selectedRegistration.payment_proof_url} 
+                            alt="Comprovante de Pagamento"
+                            className="max-h-96 w-full object-contain"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="text-xs text-muted-foreground">
+                      <p>Cadastrado em: {new Date(selectedRegistration.created_at).toLocaleString('pt-BR')}</p>
+                      <p>Atualizado em: {new Date(selectedRegistration.updated_at).toLocaleString('pt-BR')}</p>
+                    </div>
+
+                    {selectedRegistration.status === 'pending' && (
+                      <div className="flex gap-4 pt-4 border-t">
+                        <Button
+                          variant="default"
+                          className="flex-1 bg-green-500 hover:bg-green-600"
+                          onClick={() => handleApproveRegistration(selectedRegistration.id, true)}
+                          disabled={approvingRegistration}
+                        >
+                          {approvingRegistration ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <CheckCircle className="mr-2 h-4 w-4" />
+                          )}
+                          Validar Cadastro
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          className="flex-1"
+                          onClick={() => handleApproveRegistration(selectedRegistration.id, false)}
+                          disabled={approvingRegistration}
+                        >
+                          {approvingRegistration ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <XCircle className="mr-2 h-4 w-4" />
+                          )}
+                          Rejeitar por Falta de Pagamento
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
+          </>
+        )}
 
         {activeSection === 'shortcuts' && (
           <Card>

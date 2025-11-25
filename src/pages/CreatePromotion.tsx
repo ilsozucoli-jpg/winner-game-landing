@@ -172,6 +172,17 @@ export default function CreatePromotion() {
                   id="company"
                   value={sponsorData?.company || ''}
                   disabled
+                  className="bg-white dark:bg-white text-foreground"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="phone">Celular *</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  value={sponsorData?.phone || ''}
+                  disabled
                   className="bg-muted"
                 />
               </div>

@@ -310,6 +310,7 @@ export default function AdminPanel() {
       const { error: insertError } = await supabase
         .from('sponsors')
         .insert([{
+          name: 'Admin Sponsor',
           logo_url: publicUrl,
           prize_description: prizeDescription.trim(),
           phone: phone.trim(),

@@ -91,9 +91,16 @@ export default function CreatePromotion() {
       }
 
       // Insert sponsor data
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('Sessão não encontrada');
+      }
+
       const { error } = await supabase
         .from('sponsors')
         .insert({
+          user_id: session.user.id,
           name: sponsorData.company,
           phone: sponsorData.phone,
           logo_url: logoUrl,

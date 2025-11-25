@@ -46,6 +46,8 @@ export default function AdminPanel() {
   const [loadingSponsorRegistrations, setLoadingSponsorRegistrations] = useState(false);
   const [selectedRegistration, setSelectedRegistration] = useState<any | null>(null);
   const [approvingRegistration, setApprovingRegistration] = useState(false);
+  const [editingValidityDate, setEditingValidityDate] = useState(false);
+  const [newValidityDate, setNewValidityDate] = useState('');
   const [activeSection, setActiveSection] = useState<'sponsor' | 'users' | 'delete' | 'password' | 'list' | 'shortcuts' | 'sponsors-list' | 'registrations'>('sponsor');
 
   useEffect(() => {
@@ -153,6 +155,50 @@ export default function AdminPanel() {
       });
     } finally {
       setApprovingRegistration(false);
+    }
+  };
+
+  const handleUpdateValidityDate = async (registrationId: string) => {
+    if (!newValidityDate) {
+      toast({
+        title: "Erro",
+        description: "Por favor, selecione uma data de validade.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setEditingValidityDate(true);
+    try {
+      const { error } = await supabase
+        .from('sponsor_registrations')
+        .update({ validity_date: new Date(newValidityDate).toISOString() })
+        .eq('id', registrationId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso!",
+        description: "Data de validade atualizada com sucesso.",
+      });
+
+      setNewValidityDate('');
+      loadSponsorRegistrations();
+      // Update selected registration
+      if (selectedRegistration) {
+        setSelectedRegistration({
+          ...selectedRegistration,
+          validity_date: new Date(newValidityDate).toISOString()
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setEditingValidityDate(false);
     }
   };
 
@@ -1127,6 +1173,17 @@ export default function AdminPanel() {
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
+                        <label className="text-sm font-medium text-muted-foreground">Celular</label>
+                        <p className="text-foreground">{selectedRegistration.phone || 'Não informado'}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Email</label>
+                        <p className="text-foreground">{selectedRegistration.email || 'Não informado'}</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
                         <label className="text-sm font-medium text-muted-foreground">Cidade</label>
                         <p className="text-foreground">{selectedRegistration.city}</p>
                       </div>
@@ -1164,6 +1221,34 @@ export default function AdminPanel() {
                         {selectedRegistration.status === 'approved' ? 'Aprovado' : 
                          selectedRegistration.status === 'rejected' ? 'Rejeitado' : 'Pendente'}
                       </p>
+                    </div>
+
+                    <div className="border-t pt-4">
+                      <label className="text-sm font-medium text-muted-foreground">Data de Validade</label>
+                      <p className="text-foreground mb-2">
+                        {selectedRegistration.validity_date 
+                          ? new Date(selectedRegistration.validity_date).toLocaleDateString('pt-BR')
+                          : 'Não definida'}
+                      </p>
+                      <div className="flex gap-2">
+                        <Input
+                          type="date"
+                          value={newValidityDate}
+                          onChange={(e) => setNewValidityDate(e.target.value)}
+                          className="flex-1"
+                        />
+                        <Button
+                          variant="secondary"
+                          onClick={() => handleUpdateValidityDate(selectedRegistration.id)}
+                          disabled={editingValidityDate || !newValidityDate}
+                        >
+                          {editingValidityDate ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            'Atualizar'
+                          )}
+                        </Button>
+                      </div>
                     </div>
 
                     {selectedRegistration.payment_proof_url && (

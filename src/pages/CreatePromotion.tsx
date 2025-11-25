@@ -39,19 +39,7 @@ export default function CreatePromotion() {
         .from('sponsor_registrations')
         .select('*')
         .eq('user_id', session.user.id)
-        .single();
-
-      if (error) throw error;
-
-      if (data.status !== 'approved') {
-        toast({
-          title: "Acesso negado",
-          description: "Seu cadastro precisa estar aprovado para cadastrar promoções.",
-          variant: "destructive",
-        });
-        navigate('/sponsor-dashboard');
-        return;
-      }
+        .maybeSingle();
 
       setSponsorData(data);
     } catch (error: any) {
@@ -60,7 +48,6 @@ export default function CreatePromotion() {
         description: "Não foi possível verificar seus dados.",
         variant: "destructive",
       });
-      navigate('/sponsor-dashboard');
     } finally {
       setVerifying(false);
     }
@@ -76,11 +63,6 @@ export default function CreatePromotion() {
       
       if (!session) {
         throw new Error('Sessão não encontrada');
-      }
-
-      // Verify sponsor is approved before proceeding
-      if (sponsorData.status !== 'approved') {
-        throw new Error('Seu cadastro precisa estar aprovado para cadastrar promoções');
       }
 
       let logoUrl = null;

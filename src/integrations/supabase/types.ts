@@ -82,6 +82,54 @@ export type Database = {
         }
         Relationships: []
       }
+      sponsor_registrations: {
+        Row: {
+          address: string
+          city: string
+          company: string
+          created_at: string
+          id: string
+          name: string
+          payment_proof_url: string | null
+          plan: string
+          plan_value: number
+          state: string
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          address: string
+          city: string
+          company: string
+          created_at?: string
+          id?: string
+          name: string
+          payment_proof_url?: string | null
+          plan: string
+          plan_value: number
+          state: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          address?: string
+          city?: string
+          company?: string
+          created_at?: string
+          id?: string
+          name?: string
+          payment_proof_url?: string | null
+          plan?: string
+          plan_value?: number
+          state?: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       sponsors: {
         Row: {
           created_at: string

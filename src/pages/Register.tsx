@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { SponsorBanner } from '@/components/SponsorBanner';
 import { useGame } from '@/contexts/GameContext';
 import { useToast } from '@/hooks/use-toast';
-import { Trophy, Settings, LogOut } from 'lucide-react';
+import { Trophy, Settings, LogOut, Building2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function Register() {
@@ -161,7 +161,42 @@ export default function Register() {
         <SponsorBanner />
 
         <div className="bg-card border border-border rounded-lg p-6 space-y-6">
-          <h2 className="text-2xl font-bold text-foreground text-center">Cadastro</h2>
+          <h2 className="text-2xl font-bold text-foreground text-center">Bem-vindo!</h2>
+          <p className="text-center text-muted-foreground">Escolha como deseja se cadastrar:</p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Button
+              variant="game"
+              size="lg"
+              className="h-32 flex flex-col gap-3"
+              onClick={() => {
+                // Keep current form visible
+              }}
+            >
+              <Trophy className="w-12 h-12" />
+              <div>
+                <div className="font-bold text-lg">Jogador</div>
+                <div className="text-sm opacity-90">Participar dos jogos</div>
+              </div>
+            </Button>
+
+            <Button
+              variant="outline"
+              size="lg"
+              className="h-32 flex flex-col gap-3 border-2 hover:border-primary hover:bg-primary/10"
+              onClick={() => navigate('/sponsor-register')}
+            >
+              <Building2 className="w-12 h-12" />
+              <div>
+                <div className="font-bold text-lg">Patrocinador</div>
+                <div className="text-sm opacity-90">Cadastrar empresa</div>
+              </div>
+            </Button>
+          </div>
+        </div>
+
+        <div className="bg-card border border-border rounded-lg p-6 space-y-6">
+          <h2 className="text-2xl font-bold text-foreground text-center">Cadastro de Jogador</h2>
           
           {hasError && (
             <Alert variant="destructive">

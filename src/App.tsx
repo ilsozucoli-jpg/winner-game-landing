@@ -14,6 +14,7 @@ import Results from "./pages/Results";
 import Ranking from "./pages/Ranking";
 import AdminPanel from "./pages/AdminPanel";
 import SponsorSelection from "./pages/SponsorSelection";
+import SponsorRegister from "./pages/SponsorRegister";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/splash" element={<SplashScreen />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/sponsor-register" element={<SponsorRegister />} />
             <Route path="/stage/:stage" element={<GameStage />} />
             <Route path="/results" element={<Results />} />
             <Route path="/ranking" element={<Ranking />} />

@@ -32,22 +32,11 @@ export default function SponsorRegister() {
     plan: 'monthly',
     phone: '',
     email: '',
+    password: '',
+    confirmPassword: '',
   });
 
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
-  const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session) {
-      navigate('/auth');
-      return;
-    }
-
-    setUser(session.user);
-  };
+  // Removido checkAuth - não precisa estar autenticado para se registrar
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -85,10 +74,28 @@ export default function SponsorRegister() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.address || !formData.city || !formData.state || !formData.company || !formData.phone || !formData.email) {
+    if (!formData.name || !formData.address || !formData.city || !formData.state || !formData.company || !formData.phone || !formData.email || !formData.password || !formData.confirmPassword) {
       toast({
         title: "Campos obrigatórios",
         description: "Por favor, preencha todos os campos.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      toast({
+        title: "Senhas não conferem",
+        description: "As senhas digitadas devem ser iguais.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      toast({
+        title: "Senha muito curta",
+        description: "A senha deve ter no mínimo 6 caracteres.",
         variant: "destructive",
       });
       return;
@@ -105,15 +112,24 @@ export default function SponsorRegister() {
 
     try {
       setUploading(true);
-      const { data: { session } } = await supabase.auth.getSession();
+
+      // Criar usuário no sistema de autenticação
+      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+        }
+      });
+
+      if (signUpError) throw signUpError;
       
-      if (!session) {
-        navigate('/auth');
-        return;
+      if (!authData.user) {
+        throw new Error('Erro ao criar usuário');
       }
 
       // Upload do comprovante
-      const paymentProofUrl = await uploadPaymentProof(session.user.id);
+      const paymentProofUrl = await uploadPaymentProof(authData.user.id);
 
       const selectedPlan = PLAN_OPTIONS.find(p => p.value === formData.plan);
       
@@ -121,7 +137,7 @@ export default function SponsorRegister() {
       const { error } = await supabase
         .from('sponsor_registrations')
         .insert({
-          user_id: session.user.id,
+          user_id: authData.user.id,
           name: formData.name,
           address: formData.address,
           city: formData.city,
@@ -138,12 +154,12 @@ export default function SponsorRegister() {
       if (error) throw error;
 
       toast({
-        title: "Cadastro enviado!",
-        description: "Seu cadastro de patrocinador está em análise.",
+        title: "Cadastro realizado!",
+        description: "Usuário criado e cadastro de patrocinador enviado para análise.",
         className: "bg-success text-success-foreground",
       });
       
-      navigate('/register');
+      navigate('/auth');
     } catch (error: any) {
       toast({
         title: "Erro",
@@ -228,6 +244,34 @@ export default function SponsorRegister() {
                   placeholder="seu@email.com"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="bg-background"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="password">Senha *</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Mínimo 6 caracteres"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  className="bg-background"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirmar Senha *</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  placeholder="Digite a senha novamente"
+                  value={formData.confirmPassword}
+                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                   className="bg-background"
                   required
                 />

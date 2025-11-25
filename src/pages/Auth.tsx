@@ -27,7 +27,18 @@ export default function Auth() {
         if (roleData) {
           navigate('/admin');
         } else {
-          navigate('/');
+          // Check if user is a sponsor
+          const { data: sponsorData } = await supabase
+            .from('sponsor_registrations')
+            .select('id')
+            .eq('user_id', session.user.id)
+            .maybeSingle();
+
+          if (sponsorData) {
+            navigate('/sponsor-dashboard');
+          } else {
+            navigate('/');
+          }
         }
       }
     });
@@ -44,7 +55,18 @@ export default function Auth() {
         if (roleData) {
           navigate('/admin');
         } else {
-          navigate('/');
+          // Check if user is a sponsor
+          const { data: sponsorData } = await supabase
+            .from('sponsor_registrations')
+            .select('id')
+            .eq('user_id', session.user.id)
+            .maybeSingle();
+
+          if (sponsorData) {
+            navigate('/sponsor-dashboard');
+          } else {
+            navigate('/');
+          }
         }
       }
     });
@@ -82,7 +104,18 @@ export default function Auth() {
           if (roleData) {
             navigate('/admin');
           } else {
-            navigate('/sponsor-selection');
+            // Check if user is a sponsor
+            const { data: sponsorData } = await supabase
+              .from('sponsor_registrations')
+              .select('id')
+              .eq('user_id', data.user.id)
+              .maybeSingle();
+
+            if (sponsorData) {
+              navigate('/sponsor-dashboard');
+            } else {
+              navigate('/sponsor-selection');
+            }
           }
         }
       } else {

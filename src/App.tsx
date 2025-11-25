@@ -15,6 +15,8 @@ import Ranking from "./pages/Ranking";
 import AdminPanel from "./pages/AdminPanel";
 import SponsorSelection from "./pages/SponsorSelection";
 import SponsorRegister from "./pages/SponsorRegister";
+import SponsorDashboard from "./pages/SponsorDashboard";
+import CreatePromotion from "./pages/CreatePromotion";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +38,8 @@ const App = () => (
             <Route path="/results" element={<Results />} />
             <Route path="/ranking" element={<Ranking />} />
             <Route path="/sponsor-selection" element={<SponsorSelection />} />
+            <Route path="/sponsor-dashboard" element={<SponsorDashboard />} />
+            <Route path="/create-promotion" element={<CreatePromotion />} />
             <Route path="/admin" element={<AdminPanel />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

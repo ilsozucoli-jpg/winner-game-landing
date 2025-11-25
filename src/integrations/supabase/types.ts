@@ -88,45 +88,54 @@ export type Database = {
           city: string
           company: string
           created_at: string
+          email: string | null
           id: string
           name: string
           payment_proof_url: string | null
+          phone: string | null
           plan: string
           plan_value: number
           state: string
           status: string
           updated_at: string
           user_id: string | null
+          validity_date: string | null
         }
         Insert: {
           address: string
           city: string
           company: string
           created_at?: string
+          email?: string | null
           id?: string
           name: string
           payment_proof_url?: string | null
+          phone?: string | null
           plan: string
           plan_value: number
           state: string
           status?: string
           updated_at?: string
           user_id?: string | null
+          validity_date?: string | null
         }
         Update: {
           address?: string
           city?: string
           company?: string
           created_at?: string
+          email?: string | null
           id?: string
           name?: string
           payment_proof_url?: string | null
+          phone?: string | null
           plan?: string
           plan_value?: number
           state?: string
           status?: string
           updated_at?: string
           user_id?: string | null
+          validity_date?: string | null
         }
         Relationships: []
       }

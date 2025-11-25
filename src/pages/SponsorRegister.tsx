@@ -30,6 +30,8 @@ export default function SponsorRegister() {
     state: '',
     company: '',
     plan: 'monthly',
+    phone: '',
+    email: '',
   });
 
   useEffect(() => {
@@ -83,7 +85,7 @@ export default function SponsorRegister() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.address || !formData.city || !formData.state || !formData.company) {
+    if (!formData.name || !formData.address || !formData.city || !formData.state || !formData.company || !formData.phone || !formData.email) {
       toast({
         title: "Campos obrigatórios",
         description: "Por favor, preencha todos os campos.",
@@ -129,6 +131,8 @@ export default function SponsorRegister() {
           plan_value: selectedPlan?.price || 0,
           payment_proof_url: paymentProofUrl,
           status: 'pending',
+          phone: formData.phone,
+          email: formData.email,
         });
 
       if (error) throw error;
@@ -196,6 +200,34 @@ export default function SponsorRegister() {
                   placeholder="Nome da empresa"
                   value={formData.company}
                   onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                  className="bg-background"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="phone">Celular *</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  placeholder="(11) 99999-9999"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  className="bg-background"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email">Email *</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="seu@email.com"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   className="bg-background"
                   required
                 />

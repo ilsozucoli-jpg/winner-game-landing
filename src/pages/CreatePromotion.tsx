@@ -14,8 +14,11 @@ export default function CreatePromotion() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [verifying, setVerifying] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [sponsorData, setSponsorData] = useState<any>(null);
   const [formData, setFormData] = useState({
+    company_name: '',
+    phone: '',
     prize_description: '',
     prize_count: 1,
     promotion_end_date: '',
@@ -23,10 +26,10 @@ export default function CreatePromotion() {
   const [logoFile, setLogoFile] = useState<File | null>(null);
 
   useEffect(() => {
-    verifySponsorStatus();
+    checkUserRoleAndData();
   }, []);
 
-  const verifySponsorStatus = async () => {
+  const checkUserRoleAndData = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
@@ -35,13 +38,36 @@ export default function CreatePromotion() {
         return;
       }
 
-      const { data, error } = await supabase
-        .from('sponsor_registrations')
-        .select('*')
+      // Verificar se é admin
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
         .eq('user_id', session.user.id)
+        .eq('role', 'admin')
         .maybeSingle();
 
-      setSponsorData(data);
+      const userIsAdmin = !!roleData;
+      setIsAdmin(userIsAdmin);
+
+      // Se não for admin, buscar dados do patrocinador
+      if (!userIsAdmin) {
+        const { data: sponsorReg } = await supabase
+          .from('sponsor_registrations')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .maybeSingle();
+
+        setSponsorData(sponsorReg);
+        
+        // Preencher dados do formulário com os dados do patrocinador
+        if (sponsorReg) {
+          setFormData(prev => ({
+            ...prev,
+            company_name: sponsorReg.company || '',
+            phone: sponsorReg.phone || '',
+          }));
+        }
+      }
     } catch (error: any) {
       toast({
         title: "Erro",
@@ -53,12 +79,26 @@ export default function CreatePromotion() {
     }
   };
 
+  const getBackRoute = () => {
+    return isAdmin ? '/admin-panel' : '/sponsor-dashboard';
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validação para admin
+    if (isAdmin && (!formData.company_name || !formData.phone)) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Preencha o nome da empresa e telefone.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // Get current session first
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
@@ -84,18 +124,20 @@ export default function CreatePromotion() {
         logoUrl = publicUrl;
       }
 
-      // Insert sponsor data
+      // Preparar dados para inserção
+      const insertData: any = {
+        user_id: session.user.id,
+        name: isAdmin ? formData.company_name : (sponsorData?.company || formData.company_name),
+        phone: isAdmin ? formData.phone : (sponsorData?.phone || formData.phone),
+        logo_url: logoUrl,
+        prize_description: formData.prize_description,
+        prize_count: formData.prize_count,
+        promotion_end_date: formData.promotion_end_date || null,
+      };
+
       const { error } = await supabase
         .from('sponsors')
-        .insert({
-          user_id: session.user.id,
-          name: sponsorData.company,
-          phone: sponsorData.phone,
-          logo_url: logoUrl,
-          prize_description: formData.prize_description,
-          prize_count: formData.prize_count,
-          promotion_end_date: formData.promotion_end_date,
-        });
+        .insert(insertData);
 
       if (error) {
         console.error('Erro ao inserir promoção:', error);
@@ -107,7 +149,7 @@ export default function CreatePromotion() {
         description: "Promoção cadastrada com sucesso.",
       });
 
-      navigate('/sponsor-dashboard');
+      navigate(getBackRoute());
     } catch (error: any) {
       toast({
         title: "Erro",
@@ -132,7 +174,7 @@ export default function CreatePromotion() {
       <div className="max-w-2xl mx-auto space-y-6">
         <Button
           variant="ghost"
-          onClick={() => navigate('/sponsor-dashboard')}
+          onClick={() => navigate(getBackRoute())}
           className="mb-4"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -143,31 +185,64 @@ export default function CreatePromotion() {
           <CardHeader>
             <CardTitle>Cadastrar Nova Promoção</CardTitle>
             <CardDescription>
-              Preencha os dados da promoção que será oferecida aos jogadores
+              {isAdmin 
+                ? 'Como administrador, preencha os dados da promoção' 
+                : 'Preencha os dados da promoção que será oferecida aos jogadores'}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="company">Empresa/Promotor</Label>
-                <Input
-                  id="company"
-                  value={sponsorData?.company || ''}
-                  disabled
-                  className="bg-white dark:bg-white text-foreground"
-                />
-              </div>
+              {isAdmin ? (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="company_name">Nome da Empresa/Promotor *</Label>
+                    <Input
+                      id="company_name"
+                      value={formData.company_name}
+                      onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
+                      placeholder="Digite o nome da empresa"
+                      required
+                      className="bg-background"
+                    />
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="phone">Celular *</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  value={sponsorData?.phone || ''}
-                  disabled
-                  className="bg-muted"
-                />
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Celular *</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      placeholder="(00) 00000-0000"
+                      required
+                      className="bg-background"
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="company">Empresa/Promotor</Label>
+                    <Input
+                      id="company"
+                      value={sponsorData?.company || ''}
+                      disabled
+                      className="bg-muted"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Celular</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      value={sponsorData?.phone || ''}
+                      disabled
+                      className="bg-muted"
+                    />
+                  </div>
+                </>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="logo">Logo da Empresa (opcional)</Label>

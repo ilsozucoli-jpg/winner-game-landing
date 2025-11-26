@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Upload, UserPlus, Trash2 } from 'lucide-react';
+import { Loader2, UserPlus, Trash2 } from 'lucide-react';
 import { createAdminUser } from '@/lib/adminUtils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -15,15 +15,8 @@ import { Settings, Users, UserX, Key, List, Zap, Store, CheckCircle, XCircle } f
 export default function AdminPanel() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [prizeDescription, setPrizeDescription] = useState('');
-  const [phone, setPhone] = useState('');
-  const [prizeCount, setPrizeCount] = useState('1');
-  const [promotionEndDate, setPromotionEndDate] = useState('');
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [logoPreview, setLogoPreview] = useState('');
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserPassword, setNewUserPassword] = useState('');
   const [creatingUser, setCreatingUser] = useState(false);
@@ -48,7 +41,7 @@ export default function AdminPanel() {
   const [approvingRegistration, setApprovingRegistration] = useState(false);
   const [editingValidityDate, setEditingValidityDate] = useState(false);
   const [newValidityDate, setNewValidityDate] = useState('');
-  const [activeSection, setActiveSection] = useState<'sponsor' | 'users' | 'delete' | 'password' | 'list' | 'shortcuts' | 'sponsors-list' | 'registrations'>('sponsor');
+  const [activeSection, setActiveSection] = useState<'users' | 'delete' | 'password' | 'list' | 'shortcuts' | 'sponsors-list' | 'registrations'>('users');
 
   useEffect(() => {
     checkAdminStatus();
@@ -259,87 +252,6 @@ export default function AdminPanel() {
       navigate('/');
     } finally {
       setCheckingAuth(false);
-    }
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setLogoFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setLogoPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!logoFile) {
-      toast({
-        title: "Erro",
-        description: "Por favor, selecione uma imagem para o logo.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Não autenticado');
-
-      // Upload da imagem
-      const fileExt = logoFile.name.split('.').pop();
-      const fileName = `${Math.random()}.${fileExt}`;
-      const { error: uploadError, data: uploadData } = await supabase.storage
-        .from('sponsor-logos')
-        .upload(fileName, logoFile);
-
-      if (uploadError) throw uploadError;
-
-      // Obter URL pública
-      const { data: { publicUrl } } = supabase.storage
-        .from('sponsor-logos')
-        .getPublicUrl(fileName);
-
-      // Inserir novo patrocinador
-      const { error: insertError } = await supabase
-        .from('sponsors')
-        .insert([{
-          name: 'Admin Sponsor',
-          logo_url: publicUrl,
-          prize_description: prizeDescription.trim(),
-          phone: phone.trim(),
-          prize_count: parseInt(prizeCount) || 1,
-          promotion_end_date: promotionEndDate ? new Date(promotionEndDate).toISOString() : null,
-        }]);
-
-      if (insertError) throw insertError;
-
-      toast({
-        title: "Sucesso!",
-        description: "Patrocinador cadastrado com sucesso.",
-      });
-
-      // Limpar formulário
-      setPrizeDescription('');
-      setPhone('');
-      setPrizeCount('1');
-      setPromotionEndDate('');
-      setLogoFile(null);
-      setLogoPreview('');
-    } catch (error: any) {
-      toast({
-        title: "Erro",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -608,7 +520,7 @@ export default function AdminPanel() {
   if (!isAdmin) return null;
 
   const menuButtons = [
-    { id: 'sponsor', label: 'Patrocinador', icon: Settings, color: 'bg-blue-500 hover:bg-blue-600' },
+    { id: 'create-promotion', label: 'Cadastrar nova promoção', icon: Settings, color: 'bg-blue-500 hover:bg-blue-600', isNavigation: true },
     { id: 'sponsors-list', label: 'Lista Patrocinadores', icon: Users, color: 'bg-indigo-500 hover:bg-indigo-600' },
     { id: 'registrations', label: 'Promotores Cadastrados', icon: Store, color: 'bg-orange-500 hover:bg-orange-600' },
     { id: 'users', label: 'Criar Admin', icon: UserPlus, color: 'bg-green-500 hover:bg-green-600' },
@@ -634,10 +546,14 @@ export default function AdminPanel() {
               <Button
                 key={button.id}
                 onClick={() => {
-                  setActiveSection(button.id as any);
-                  if (button.id === 'list') loadUsers();
-                  if (button.id === 'sponsors-list') loadSponsors();
-                  if (button.id === 'registrations') loadSponsorRegistrations();
+                  if (button.isNavigation) {
+                    navigate('/create-promotion');
+                  } else {
+                    setActiveSection(button.id as any);
+                    if (button.id === 'list') loadUsers();
+                    if (button.id === 'sponsors-list') loadSponsors();
+                    if (button.id === 'registrations') loadSponsorRegistrations();
+                  }
                 }}
                 className={`${button.color} text-white h-24 flex flex-col items-center justify-center gap-2 transition-all`}
                 size="lg"
@@ -649,100 +565,6 @@ export default function AdminPanel() {
           })}
         </div>
 
-        {activeSection === 'sponsor' && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Cadastrar Patrocinador</CardTitle>
-                <CardDescription>Configure o patrocinador e o prêmio do evento</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Logo do Patrocinador</label>
-                    <div className="space-y-4">
-                      <Input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleFileChange}
-                        className="cursor-pointer"
-                      />
-                      {logoPreview && (
-                        <div className="border border-border rounded-lg p-4 flex justify-center">
-                          <img src={logoPreview} alt="Preview" className="max-h-48 object-contain" />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Descrição do Prêmio</label>
-                    <Textarea
-                      value={prizeDescription}
-                      onChange={(e) => setPrizeDescription(e.target.value)}
-                      placeholder="Ex: R$ 10.000 em produtos"
-                      required
-                      rows={3}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Telefone de Contato</label>
-                    <Input
-                      type="tel"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="(11) 99999-9999"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Quantidade de Prêmios</label>
-                    <Input
-                      type="number"
-                      value={prizeCount}
-                      onChange={(e) => setPrizeCount(e.target.value)}
-                      placeholder="1"
-                      min="1"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Data e Horário Final da Promoção</label>
-                    <Input
-                      type="datetime-local"
-                      value={promotionEndDate}
-                      onChange={(e) => setPromotionEndDate(e.target.value)}
-                      placeholder="Data final"
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Deixe em branco se não houver data limite
-                    </p>
-                  </div>
-
-                  <div className="flex gap-4">
-                    <Button type="submit" disabled={loading} variant="game" size="xl" className="flex-1">
-                      {loading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Salvando...
-                        </>
-                      ) : (
-                        <>
-                          <Upload className="mr-2 h-4 w-4" />
-                          Cadastrar Patrocinador
-                        </>
-                      )}
-                    </Button>
-                    <Button type="button" variant="outline" onClick={() => navigate('/')}>
-                      Voltar
-                    </Button>
-                  </div>
-                </form>
-              </CardContent>
-            </Card>
-        )}
 
         {activeSection === 'users' && (
             <Card>

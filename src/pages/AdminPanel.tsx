@@ -80,13 +80,29 @@ export default function AdminPanel() {
   const loadSponsors = async () => {
     setLoadingSponsors(true);
     try {
-      const { data, error } = await supabase
+      const { data: sponsorsData, error } = await supabase
         .from('sponsors')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setSponsors(data || []);
+
+      // Get player counts for each sponsor
+      const sponsorsWithPlayerCount = await Promise.all(
+        (sponsorsData || []).map(async (sponsor) => {
+          const { count } = await supabase
+            .from('game_results')
+            .select('*', { count: 'exact', head: true })
+            .eq('sponsor_id', sponsor.id);
+          
+          return {
+            ...sponsor,
+            player_count: count || 0
+          };
+        })
+      );
+
+      setSponsors(sponsorsWithPlayerCount);
     } catch (error: any) {
       toast({
         title: "Erro ao carregar patrocinadores",
@@ -521,8 +537,8 @@ export default function AdminPanel() {
 
   const menuButtons = [
     { id: 'create-promotion', label: 'Cadastrar nova promoção', icon: Settings, color: 'bg-blue-500 hover:bg-blue-600', isNavigation: true },
-    { id: 'sponsors-list', label: 'Lista Patrocinadores', icon: Users, color: 'bg-indigo-500 hover:bg-indigo-600' },
-    { id: 'registrations', label: 'Promotores Cadastrados', icon: Store, color: 'bg-orange-500 hover:bg-orange-600' },
+    { id: 'sponsors-list', label: 'Promoções', icon: Users, color: 'bg-indigo-500 hover:bg-indigo-600' },
+    { id: 'registrations', label: 'Patrocinadores', icon: Store, color: 'bg-orange-500 hover:bg-orange-600' },
     { id: 'users', label: 'Criar Admin', icon: UserPlus, color: 'bg-green-500 hover:bg-green-600' },
     { id: 'delete', label: 'Excluir Usuário', icon: UserX, color: 'bg-red-500 hover:bg-red-600' },
     { id: 'password', label: 'Mudar Senha', icon: Key, color: 'bg-amber-500 hover:bg-amber-600' },
@@ -851,9 +867,9 @@ export default function AdminPanel() {
         {activeSection === 'sponsors-list' && (
             <Card>
               <CardHeader>
-                <CardTitle>Patrocinadores Cadastrados</CardTitle>
+                <CardTitle>Promoções</CardTitle>
                 <CardDescription>
-                  Lista de todos os patrocinadores cadastrados no sistema
+                  Lista de todas as promoções cadastradas no sistema
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -862,7 +878,7 @@ export default function AdminPanel() {
                     <Loader2 className="h-8 w-8 animate-spin" />
                   </div>
                 ) : sponsors.length === 0 ? (
-                  <p className="text-center text-muted-foreground p-8">Nenhum patrocinador cadastrado</p>
+                  <p className="text-center text-muted-foreground p-8">Nenhuma promoção cadastrada</p>
                 ) : (
                   <div className="space-y-4">
                     {sponsors.map((sponsor: any) => (
@@ -881,6 +897,14 @@ export default function AdminPanel() {
                             <p className="text-sm text-muted-foreground">Prêmios: {sponsor.prize_count || 1}</p>
                             <p className="font-medium text-foreground mt-2">Prêmio: {sponsor.prize_description}</p>
                             <p className="text-sm text-muted-foreground mt-1">Telefone: {sponsor.phone}</p>
+                            {sponsor.promotion_end_date && (
+                              <p className="text-sm text-muted-foreground mt-1">
+                                Vencimento: {new Date(sponsor.promotion_end_date).toLocaleString('pt-BR')}
+                              </p>
+                            )}
+                            <p className="text-sm font-semibold text-primary mt-1">
+                              Total de jogadores: {sponsor.player_count || 0}
+                            </p>
                             <p className="text-xs text-muted-foreground mt-1">
                               Cadastrado em: {new Date(sponsor.created_at).toLocaleDateString('pt-BR')}
                             </p>

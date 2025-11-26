@@ -287,10 +287,10 @@ export default function CreatePromotion() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="promotion_end_date">Data de Término da Promoção</Label>
+                <Label htmlFor="promotion_end_date">Data e Horário de Término da Promoção</Label>
                 <Input
                   id="promotion_end_date"
-                  type="date"
+                  type="datetime-local"
                   value={formData.promotion_end_date}
                   onChange={(e) =>
                     setFormData({ ...formData, promotion_end_date: e.target.value })
@@ -300,7 +300,7 @@ export default function CreatePromotion() {
 
               <Button 
                 type="submit" 
-                className="w-full disabled:text-white disabled:text-2xl" 
+                className="w-full disabled:bg-accent disabled:text-accent-foreground disabled:text-2xl disabled:opacity-100" 
                 disabled={loading}
               >
                 {loading ? (

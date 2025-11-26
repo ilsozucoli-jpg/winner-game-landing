@@ -4,18 +4,47 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Store, Phone, Mail, MapPin, Calendar } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Loader2, Store, Phone, Mail, MapPin, Calendar, Trophy } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+
+interface Promotion {
+  id: string;
+  name: string;
+  prize_description: string;
+  prize_count: number;
+  promotion_end_date: string;
+  phone: string;
+  logo_url: string;
+}
 
 export default function SponsorDashboard() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [sponsorData, setSponsorData] = useState<any>(null);
+  const [activePromotions, setActivePromotions] = useState<Promotion[]>([]);
+  const [expiredPromotions, setExpiredPromotions] = useState<Promotion[]>([]);
 
   useEffect(() => {
     loadSponsorData();
   }, []);
+
+  useEffect(() => {
+    if (sponsorData?.validity_date) {
+      const validityDate = new Date(sponsorData.validity_date);
+      const now = new Date();
+      
+      if (validityDate < now) {
+        toast({
+          title: "Atenção",
+          description: "Sua validade expirou, validar novamente seu período de cadastro.",
+          variant: "destructive",
+          duration: 5000,
+        });
+      }
+    }
+  }, [sponsorData, toast]);
 
   const loadSponsorData = async () => {
     try {
@@ -35,6 +64,9 @@ export default function SponsorDashboard() {
       if (error) throw error;
 
       setSponsorData(data);
+      
+      // Load promotions
+      await loadPromotions(session.user.id);
     } catch (error: any) {
       toast({
         title: "Erro",
@@ -44,6 +76,30 @@ export default function SponsorDashboard() {
       console.error('Error loading sponsor data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadPromotions = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('sponsors')
+        .select('*')
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      const now = new Date();
+      const active = data?.filter(promo => 
+        promo.promotion_end_date && new Date(promo.promotion_end_date) >= now
+      ) || [];
+      const expired = data?.filter(promo => 
+        promo.promotion_end_date && new Date(promo.promotion_end_date) < now
+      ) || [];
+
+      setActivePromotions(active);
+      setExpiredPromotions(expired);
+    } catch (error) {
+      console.error('Error loading promotions:', error);
     }
   };
 
@@ -67,6 +123,43 @@ export default function SponsorDashboard() {
     if (!date) return 'Não definida';
     return new Date(date).toLocaleDateString('pt-BR');
   };
+
+  const formatDateTime = (date: string | null) => {
+    if (!date) return 'Não definida';
+    return new Date(date).toLocaleString('pt-BR');
+  };
+
+  const isValidityExpired = () => {
+    if (!sponsorData?.validity_date) return false;
+    return new Date(sponsorData.validity_date) < new Date();
+  };
+
+  const renderPromotionCard = (promotion: Promotion) => (
+    <Card 
+      key={promotion.id} 
+      className="cursor-pointer hover:shadow-lg transition-shadow"
+      onClick={() => navigate(`/ranking?sponsor_id=${promotion.id}`)}
+    >
+      <CardHeader>
+        <div className="flex justify-between items-start">
+          <div>
+            <CardTitle className="text-lg">{promotion.name || 'Promoção'}</CardTitle>
+            <CardDescription>
+              Término: {formatDateTime(promotion.promotion_end_date)}
+            </CardDescription>
+          </div>
+          <Trophy className="h-6 w-6 text-primary" />
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-2">
+          <p className="text-sm"><strong>Prêmio:</strong> {promotion.prize_description}</p>
+          <p className="text-sm"><strong>Quantidade:</strong> {promotion.prize_count}</p>
+          <p className="text-sm"><strong>Contato:</strong> {promotion.phone}</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
 
   if (loading) {
     return (
@@ -99,9 +192,9 @@ export default function SponsorDashboard() {
 
   return (
     <div className="min-h-screen bg-background p-6">
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="max-w-6xl mx-auto space-y-6">
         <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">Dashboard do Promotor</h1>
+          <h1 className="text-3xl font-bold">Tela do Patrocinador</h1>
           <Button onClick={handleLogout} variant="outline">
             Sair
           </Button>
@@ -160,7 +253,7 @@ export default function SponsorDashboard() {
             </div>
 
             {sponsorData.status === 'approved' && (
-              <div className="pt-4">
+              <div className="pt-4 space-y-2">
                 <Button 
                   onClick={() => navigate('/create-promotion')} 
                   className="w-full"
@@ -169,6 +262,17 @@ export default function SponsorDashboard() {
                   <Store className="mr-2 h-5 w-5" />
                   Cadastrar Promoção
                 </Button>
+                
+                {isValidityExpired() && (
+                  <Button 
+                    onClick={() => navigate('/sponsor-register')} 
+                    className="w-full"
+                    size="lg"
+                    variant="outline"
+                  >
+                    Renovar Período
+                  </Button>
+                )}
               </div>
             )}
 
@@ -185,6 +289,51 @@ export default function SponsorDashboard() {
             )}
           </CardContent>
         </Card>
+
+        {sponsorData.status === 'approved' && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Minhas Promoções</CardTitle>
+              <CardDescription>Visualize e gerencie suas promoções cadastradas</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Tabs defaultValue="active" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="active">
+                    Ativas ({activePromotions.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="expired">
+                    Vencidas ({expiredPromotions.length})
+                  </TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="active" className="space-y-4 mt-4">
+                  {activePromotions.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">
+                      Nenhuma promoção ativa no momento
+                    </p>
+                  ) : (
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {activePromotions.map(renderPromotionCard)}
+                    </div>
+                  )}
+                </TabsContent>
+                
+                <TabsContent value="expired" className="space-y-4 mt-4">
+                  {expiredPromotions.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">
+                      Nenhuma promoção vencida
+                    </p>
+                  ) : (
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {expiredPromotions.map(renderPromotionCard)}
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

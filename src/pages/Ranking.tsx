@@ -164,7 +164,7 @@ export default function Ranking() {
             className="w-full"
           >
             <Building2 className="w-5 h-5 mr-2" />
-            OUTRO PATROCINADOR
+            OUTRA PROMOÇÃO
           </Button>
           <Button
             variant="game"

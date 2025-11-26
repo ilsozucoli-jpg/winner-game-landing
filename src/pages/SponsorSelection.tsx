@@ -186,10 +186,10 @@ export default function SponsorSelection() {
       <div className="max-w-6xl mx-auto space-y-8">
         <div className="text-center space-y-2">
           <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-            Escolha seu Patrocinador
+            Escolha sua promoção
           </h1>
           <p className="text-muted-foreground">
-            Selecione um patrocinador para começar a jogar
+            Selecione uma promoção para começar a jogar
           </p>
         </div>
 

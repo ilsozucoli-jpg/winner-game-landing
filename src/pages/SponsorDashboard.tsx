@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Store, Phone, Mail, MapPin, Calendar, Trophy } from 'lucide-react';
+import { Loader2, Store, Phone, Mail, MapPin, Calendar, Trophy, AlertCircle, Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface Promotion {
@@ -254,25 +254,27 @@ export default function SponsorDashboard() {
 
             {sponsorData.status === 'approved' && (
               <div className="pt-4 space-y-2">
+                {isValidityExpired() && (
+                  <Button 
+                    onClick={() => navigate('/sponsor-register')} 
+                    className="w-full animate-pulse bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                    size="lg"
+                    variant="destructive"
+                  >
+                    <AlertCircle className="mr-2 h-5 w-5" />
+                    Renovar Período
+                  </Button>
+                )}
+                
                 <Button 
                   onClick={() => navigate('/create-promotion')} 
                   className="w-full"
                   size="lg"
+                  disabled={isValidityExpired()}
                 >
-                  <Store className="mr-2 h-5 w-5" />
+                  <Plus className="mr-2 h-5 w-5" />
                   Cadastrar Promoção
                 </Button>
-                
-                {isValidityExpired() && (
-                  <Button 
-                    onClick={() => navigate('/sponsor-register')} 
-                    className="w-full"
-                    size="lg"
-                    variant="outline"
-                  >
-                    Renovar Período
-                  </Button>
-                )}
               </div>
             )}
 

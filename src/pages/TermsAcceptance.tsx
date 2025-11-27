@@ -38,8 +38,8 @@ export default function TermsAcceptance() {
         .single();
 
       if (profile?.terms_accepted_at) {
-        // Already accepted, redirect to sponsor selection
-        navigate('/sponsor-selection');
+        // Already accepted, redirect to role selection
+        navigate('/role-selection');
       }
     });
   }, [navigate]);
@@ -75,7 +75,7 @@ export default function TermsAcceptance() {
         description: "Você pode continuar com o cadastro.",
       });
 
-      navigate('/sponsor-selection');
+      navigate('/role-selection');
     } catch (error: any) {
       toast({
         title: "Erro",

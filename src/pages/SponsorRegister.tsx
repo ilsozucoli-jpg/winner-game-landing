@@ -128,6 +128,24 @@ export default function SponsorRegister() {
         throw new Error('Erro ao criar usuário');
       }
 
+      // Verificar se usuário já é jogador (tem name preenchido no perfil)
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('name')
+        .eq('id', authData.user.id)
+        .maybeSingle();
+
+      if (profile?.name) {
+        toast({
+          title: "Usuário já cadastrado como jogador",
+          description: "Este usuário já possui cadastro como jogador.",
+          variant: "destructive",
+        });
+        await supabase.auth.signOut();
+        setUploading(false);
+        return;
+      }
+
       // Upload do comprovante
       const paymentProofUrl = await uploadPaymentProof(authData.user.id);
 

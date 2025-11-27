@@ -45,7 +45,7 @@ export default function Auth() {
               .single();
 
             if (profile?.terms_accepted_at) {
-              navigate('/sponsor-selection');
+              navigate('/role-selection');
             } else {
               navigate('/terms-acceptance');
             }
@@ -84,7 +84,7 @@ export default function Auth() {
               .single();
 
             if (profile?.terms_accepted_at) {
-              navigate('/sponsor-selection');
+              navigate('/role-selection');
             } else {
               navigate('/terms-acceptance');
             }
@@ -145,7 +145,7 @@ export default function Auth() {
                 .single();
 
               if (profile?.terms_accepted_at) {
-                navigate('/sponsor-selection');
+                navigate('/role-selection');
               } else {
                 navigate('/terms-acceptance');
               }

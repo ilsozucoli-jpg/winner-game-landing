@@ -17,6 +17,8 @@ import SponsorSelection from "./pages/SponsorSelection";
 import SponsorRegister from "./pages/SponsorRegister";
 import SponsorDashboard from "./pages/SponsorDashboard";
 import TermsAcceptance from "./pages/TermsAcceptance";
+import RoleSelection from "./pages/RoleSelection";
+import PlayerRegister from "./pages/PlayerRegister";
 import CreatePromotion from "./pages/CreatePromotion";
 import NotFound from "./pages/NotFound";
 
@@ -41,6 +43,8 @@ const App = () => (
             <Route path="/sponsor-selection" element={<SponsorSelection />} />
             <Route path="/sponsor-dashboard" element={<SponsorDashboard />} />
             <Route path="/terms-acceptance" element={<TermsAcceptance />} />
+            <Route path="/role-selection" element={<RoleSelection />} />
+            <Route path="/player-register" element={<PlayerRegister />} />
             <Route path="/create-promotion" element={<CreatePromotion />} />
             <Route path="/admin" element={<AdminPanel />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

@@ -88,8 +88,8 @@ export default function Auth() {
   }, [navigate]);
 
   const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
-    const element = event.currentTarget;
-    const isAtBottom = Math.abs(element.scrollHeight - element.scrollTop - element.clientHeight) < 10;
+    const target = event.target as HTMLDivElement;
+    const isAtBottom = Math.abs(target.scrollHeight - target.scrollTop - target.clientHeight) < 10;
     if (isAtBottom) {
       setHasScrolledToBottom(true);
     }
@@ -187,7 +187,7 @@ export default function Auth() {
             </DialogDescription>
           </DialogHeader>
           
-          <ScrollArea className="h-[60vh] pr-4" onScroll={handleScroll}>
+          <ScrollArea className="h-[60vh] pr-4" onScrollCapture={handleScroll}>
             <div className="space-y-4 text-sm">
               <section>
                 <h3 className="font-bold text-lg mb-2">1. Introdução e Aceitação</h3>

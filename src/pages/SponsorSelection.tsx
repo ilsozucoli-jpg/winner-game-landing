@@ -41,6 +41,19 @@ export default function SponsorSelection() {
         return;
       }
 
+      // Verificar se usuário tem dados completos no perfil
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('name')
+        .eq('id', session.user.id)
+        .single();
+
+      if (!profile?.name) {
+        // Redirecionar para cadastro de jogador
+        navigate('/player-register');
+        return;
+      }
+
       await loadSponsors();
     } catch (error) {
       toast({

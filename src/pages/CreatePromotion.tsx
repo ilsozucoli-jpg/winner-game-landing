@@ -24,6 +24,7 @@ export default function CreatePromotion() {
     promotion_end_date: '',
   });
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
   useEffect(() => {
     checkUserRoleAndData();
@@ -83,8 +84,33 @@ export default function CreatePromotion() {
     return isAdmin ? '/admin-panel' : '/sponsor-dashboard';
   };
 
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    setLogoFile(file);
+    
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setLogoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setLogoPreview(null);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validação do logo obrigatório
+    if (!logoFile) {
+      toast({
+        title: "Logo obrigatório",
+        description: "Por favor, adicione o logo da empresa.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     // Validação para admin
     if (isAdmin && (!formData.company_name || !formData.phone)) {
@@ -195,12 +221,12 @@ export default function CreatePromotion() {
               {isAdmin ? (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="company_name">Nome da Empresa/Promotor *</Label>
+                    <Label htmlFor="company_name">Nome do Patrocinador *</Label>
                     <Input
                       id="company_name"
                       value={formData.company_name}
                       onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
-                      placeholder="Digite o nome da empresa"
+                      placeholder="Digite o nome do patrocinador"
                       required
                       className="bg-background"
                     />
@@ -222,12 +248,12 @@ export default function CreatePromotion() {
               ) : (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="company">Empresa/Promotor</Label>
+                    <Label htmlFor="company">Patrocinador</Label>
                     <Input
                       id="company"
                       value={sponsorData?.company || ''}
                       disabled
-                      className="bg-muted"
+                      className="bg-yellow-200 dark:bg-yellow-900"
                     />
                   </div>
 
@@ -238,23 +264,35 @@ export default function CreatePromotion() {
                       type="tel"
                       value={sponsorData?.phone || ''}
                       disabled
-                      className="bg-muted"
+                      className="bg-yellow-200 dark:bg-yellow-900"
                     />
                   </div>
                 </>
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="logo">Logo da Empresa (opcional)</Label>
-                <div className="flex items-center gap-4">
-                  <Input
-                    id="logo"
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
-                    className="flex-1"
-                  />
-                  <Upload className="h-5 w-5 text-muted-foreground" />
+                <Label htmlFor="logo">Logo da Empresa *</Label>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4">
+                    <Input
+                      id="logo"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoChange}
+                      className="flex-1"
+                      required
+                    />
+                    <Upload className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  {logoPreview && (
+                    <div className="flex justify-center">
+                      <img 
+                        src={logoPreview} 
+                        alt="Preview do logo" 
+                        className="h-32 w-32 object-contain border-2 border-border rounded-lg"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
 

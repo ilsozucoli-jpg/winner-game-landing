@@ -42,9 +42,12 @@ export default function AdminPanel() {
   const [editingValidityDate, setEditingValidityDate] = useState(false);
   const [newValidityDate, setNewValidityDate] = useState('');
   const [activeSection, setActiveSection] = useState<'users' | 'delete' | 'password' | 'list' | 'shortcuts' | 'sponsors-list' | 'registrations'>('users');
+  const [promotionsEnabled, setPromotionsEnabled] = useState(true);
+  const [togglingPromotions, setTogglingPromotions] = useState(false);
 
   useEffect(() => {
     checkAdminStatus();
+    loadPromotionsSetting();
   }, []);
 
   const loadUsers = async () => {
@@ -208,6 +211,53 @@ export default function AdminPanel() {
       });
     } finally {
       setEditingValidityDate(false);
+    }
+  };
+
+  const loadPromotionsSetting = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('system_settings')
+        .select('setting_value')
+        .eq('setting_key', 'promotions_registration_enabled')
+        .single();
+
+      if (error) throw error;
+      const settingValue = data?.setting_value as { enabled: boolean } | null;
+      setPromotionsEnabled(settingValue?.enabled ?? true);
+    } catch (error: any) {
+      console.error('Erro ao carregar configuração:', error);
+    }
+  };
+
+  const handleTogglePromotions = async () => {
+    setTogglingPromotions(true);
+    try {
+      const newValue = !promotionsEnabled;
+      
+      const { error } = await supabase
+        .from('system_settings')
+        .update({ 
+          setting_value: { enabled: newValue },
+          updated_at: new Date().toISOString()
+        })
+        .eq('setting_key', 'promotions_registration_enabled');
+
+      if (error) throw error;
+
+      setPromotionsEnabled(newValue);
+      toast({
+        title: "Configuração atualizada!",
+        description: `Cadastros de promoções ${newValue ? 'ativados' : 'bloqueados'} com sucesso.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setTogglingPromotions(false);
     }
   };
 
@@ -549,10 +599,44 @@ export default function AdminPanel() {
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-4xl mx-auto space-y-6">
-        <div className="text-center">
+        <div className="text-center space-y-4">
           <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-2">
             Painel Administrativo
           </h1>
+          
+          <Card className="max-w-md mx-auto">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {promotionsEnabled ? (
+                    <CheckCircle className="w-6 h-6 text-green-500" />
+                  ) : (
+                    <XCircle className="w-6 h-6 text-red-500" />
+                  )}
+                  <div className="text-left">
+                    <p className="font-semibold">Cadastros de Promoções</p>
+                    <p className="text-sm text-muted-foreground">
+                      {promotionsEnabled ? 'Habilitados' : 'Bloqueados'}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  onClick={handleTogglePromotions}
+                  disabled={togglingPromotions}
+                  variant={promotionsEnabled ? "destructive" : "default"}
+                  size="sm"
+                >
+                  {togglingPromotions ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : promotionsEnabled ? (
+                    'Bloquear'
+                  ) : (
+                    'Ativar'
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">

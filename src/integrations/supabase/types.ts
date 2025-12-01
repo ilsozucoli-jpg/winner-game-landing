@@ -144,6 +144,7 @@ export type Database = {
       }
       sponsors: {
         Row: {
+          city: string | null
           created_at: string
           id: string
           logo_url: string | null
@@ -153,10 +154,12 @@ export type Database = {
           prize_description: string
           promotion_end_date: string | null
           sponsor_registration_id: string | null
+          state: string | null
           updated_at: string
           user_id: string | null
         }
         Insert: {
+          city?: string | null
           created_at?: string
           id?: string
           logo_url?: string | null
@@ -166,10 +169,12 @@ export type Database = {
           prize_description: string
           promotion_end_date?: string | null
           sponsor_registration_id?: string | null
+          state?: string | null
           updated_at?: string
           user_id?: string | null
         }
         Update: {
+          city?: string | null
           created_at?: string
           id?: string
           logo_url?: string | null
@@ -179,6 +184,7 @@ export type Database = {
           prize_description?: string
           promotion_end_date?: string | null
           sponsor_registration_id?: string | null
+          state?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -191,6 +197,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      system_settings: {
+        Row: {
+          created_at: string | null
+          id: string
+          setting_key: string
+          setting_value: Json
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          setting_key: string
+          setting_value: Json
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          setting_key?: string
+          setting_value?: Json
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {

@@ -152,6 +152,7 @@ export type Database = {
           prize_count: number
           prize_description: string
           promotion_end_date: string | null
+          sponsor_registration_id: string | null
           updated_at: string
           user_id: string | null
         }
@@ -164,6 +165,7 @@ export type Database = {
           prize_count?: number
           prize_description: string
           promotion_end_date?: string | null
+          sponsor_registration_id?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -176,10 +178,19 @@ export type Database = {
           prize_count?: number
           prize_description?: string
           promotion_end_date?: string | null
+          sponsor_registration_id?: string | null
           updated_at?: string
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "sponsors_sponsor_registration_id_fkey"
+            columns: ["sponsor_registration_id"]
+            isOneToOne: false
+            referencedRelation: "sponsor_registrations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {

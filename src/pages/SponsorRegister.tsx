@@ -115,71 +115,115 @@ export default function SponsorRegister() {
     try {
       setUploading(true);
 
-      // Criar usuário no sistema de autenticação
-      const { data: authData, error: signUpError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
+      if (isRenewal) {
+        // Fluxo de renovação - atualizar registro existente
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (!user) {
+          throw new Error('Usuário não autenticado');
         }
-      });
 
-      if (signUpError) throw signUpError;
-      
-      if (!authData.user) {
-        throw new Error('Erro ao criar usuário');
-      }
+        // Atualizar senha
+        const { error: passwordError } = await supabase.auth.updateUser({
+          password: formData.password
+        });
 
-      // Verificar se usuário já é jogador (tem name preenchido no perfil)
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('name')
-        .eq('id', authData.user.id)
-        .maybeSingle();
+        if (passwordError) throw passwordError;
 
-      if (profile?.name) {
+        // Upload do novo comprovante
+        const paymentProofUrl = await uploadPaymentProof(user.id);
+        const selectedPlan = PLAN_OPTIONS.find(p => p.value === formData.plan);
+
+        // Atualizar registro de patrocinador
+        const { error: updateError } = await supabase
+          .from('sponsor_registrations')
+          .update({
+            address: formData.address,
+            city: formData.city,
+            state: formData.state,
+            phone: formData.phone,
+            plan: formData.plan,
+            plan_value: selectedPlan?.price || 0,
+            payment_proof_url: paymentProofUrl,
+            status: 'pending',
+          })
+          .eq('user_id', user.id);
+
+        if (updateError) throw updateError;
+
         toast({
-          title: "Usuário já cadastrado como jogador",
-          description: "Este usuário já possui cadastro como jogador.",
-          variant: "destructive",
+          title: "Renovação realizada!",
+          description: "Cadastro atualizado e enviado para análise.",
+          className: "bg-success text-success-foreground",
         });
-        await supabase.auth.signOut();
-        setUploading(false);
-        return;
-      }
-
-      // Upload do comprovante
-      const paymentProofUrl = await uploadPaymentProof(authData.user.id);
-
-      const selectedPlan = PLAN_OPTIONS.find(p => p.value === formData.plan);
-      
-      // Inserir registro de patrocinador
-      const { error } = await supabase
-        .from('sponsor_registrations')
-        .insert({
-          user_id: authData.user.id,
-          name: formData.name,
-          address: formData.address,
-          city: formData.city,
-          state: formData.state,
-          company: formData.company,
-          plan: formData.plan,
-          plan_value: selectedPlan?.price || 0,
-          payment_proof_url: paymentProofUrl,
-          status: 'pending',
-          phone: formData.phone,
+        
+        navigate('/sponsor-dashboard');
+      } else {
+        // Fluxo de novo cadastro
+        const { data: authData, error: signUpError } = await supabase.auth.signUp({
           email: formData.email,
+          password: formData.password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/`,
+          }
         });
 
-      if (error) throw error;
+        if (signUpError) throw signUpError;
+        
+        if (!authData.user) {
+          throw new Error('Erro ao criar usuário');
+        }
 
-      toast({
-        title: "Cadastro realizado!",
-        description: "Usuário criado e cadastro de patrocinador enviado para análise.",
-        className: "bg-success text-success-foreground",
-      });
-      
-      navigate('/auth');
+        // Verificar se usuário já é jogador (tem name preenchido no perfil)
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('name')
+          .eq('id', authData.user.id)
+          .maybeSingle();
+
+        if (profile?.name) {
+          toast({
+            title: "Usuário já cadastrado como jogador",
+            description: "Este usuário já possui cadastro como jogador.",
+            variant: "destructive",
+          });
+          await supabase.auth.signOut();
+          setUploading(false);
+          return;
+        }
+
+        // Upload do comprovante
+        const paymentProofUrl = await uploadPaymentProof(authData.user.id);
+        const selectedPlan = PLAN_OPTIONS.find(p => p.value === formData.plan);
+        
+        // Inserir registro de patrocinador
+        const { error } = await supabase
+          .from('sponsor_registrations')
+          .insert({
+            user_id: authData.user.id,
+            name: formData.name,
+            address: formData.address,
+            city: formData.city,
+            state: formData.state,
+            company: formData.company,
+            plan: formData.plan,
+            plan_value: selectedPlan?.price || 0,
+            payment_proof_url: paymentProofUrl,
+            status: 'pending',
+            phone: formData.phone,
+            email: formData.email,
+          });
+
+        if (error) throw error;
+
+        toast({
+          title: "Cadastro realizado!",
+          description: "Usuário criado e cadastro de patrocinador enviado para análise.",
+          className: "bg-success text-success-foreground",
+        });
+        
+        navigate('/auth');
+      }
     } catch (error: any) {
       toast({
         title: "Erro",

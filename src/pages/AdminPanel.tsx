@@ -935,9 +935,9 @@ export default function AdminPanel() {
           <>
             <Card>
               <CardHeader>
-                <CardTitle>Promotores Cadastrados</CardTitle>
+                <CardTitle>Patrocinadores cadastrados</CardTitle>
                 <CardDescription>
-                  Lista de cadastros de promotores pendentes ou processados
+                  Lista de cadastros de patrocinadores pendentes ou processados
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -1002,7 +1002,7 @@ export default function AdminPanel() {
                 <DialogHeader>
                   <DialogTitle>Detalhes do Cadastro</DialogTitle>
                   <DialogDescription>
-                    Informações completas do promotor cadastrado
+                    Informações completas do patrocinador cadastrado
                   </DialogDescription>
                 </DialogHeader>
                 {selectedRegistration && (

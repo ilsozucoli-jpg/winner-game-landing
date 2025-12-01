@@ -1101,13 +1101,21 @@ export default function AdminPanel() {
                     {selectedRegistration.payment_proof_url && (
                       <div>
                         <label className="text-sm font-medium text-muted-foreground">Comprovante de Pagamento</label>
-                        <div className="mt-2 border rounded-lg p-4 bg-muted/50">
+                        <a 
+                          href={selectedRegistration.payment_proof_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block mt-2 border rounded-lg p-4 bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
+                        >
                           <img 
                             src={selectedRegistration.payment_proof_url} 
                             alt="Comprovante de Pagamento"
                             className="max-h-96 w-full object-contain"
                           />
-                        </div>
+                          <p className="text-center text-sm text-muted-foreground mt-2">
+                            Clique para abrir o arquivo
+                          </p>
+                        </a>
                       </div>
                     )}
 

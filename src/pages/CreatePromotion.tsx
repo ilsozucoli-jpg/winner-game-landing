@@ -18,12 +18,15 @@ export default function CreatePromotion() {
   const [verifying, setVerifying] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [sponsorData, setSponsorData] = useState<any>(null);
+  const [promotionsEnabled, setPromotionsEnabled] = useState(true);
   const [formData, setFormData] = useState({
     company_name: '',
     phone: '',
     prize_description: '',
     prize_count: 1,
     promotion_end_date: '',
+    city: '',
+    state: '',
   });
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -41,6 +44,17 @@ export default function CreatePromotion() {
         return;
       }
 
+      // Verificar se cadastros de promoções estão habilitados
+      const { data: settingsData } = await supabase
+        .from('system_settings')
+        .select('setting_value')
+        .eq('setting_key', 'promotions_registration_enabled')
+        .single();
+
+      const settingValue = settingsData?.setting_value as { enabled: boolean } | null;
+      const enabled = settingValue?.enabled ?? true;
+      setPromotionsEnabled(enabled);
+
       // Verificar se é admin
       const { data: roleData } = await supabase
         .from('user_roles')
@@ -51,6 +65,15 @@ export default function CreatePromotion() {
 
       const userIsAdmin = !!roleData;
       setIsAdmin(userIsAdmin);
+
+      // Admins podem cadastrar mesmo quando bloqueado
+      if (!userIsAdmin && !enabled) {
+        toast({
+          title: "Cadastros Bloqueados",
+          description: "Novos cadastros de promoções estão temporariamente bloqueados.",
+          variant: "destructive",
+        });
+      }
 
       // Se não for admin, buscar dados do patrocinador
       if (!userIsAdmin) {
@@ -68,6 +91,8 @@ export default function CreatePromotion() {
             ...prev,
             company_name: sponsorReg.company || '',
             phone: sponsorReg.phone || '',
+            city: sponsorReg.city || '',
+            state: sponsorReg.state || '',
           }));
         }
       }
@@ -162,6 +187,8 @@ export default function CreatePromotion() {
         prize_count: formData.prize_count,
         promotion_end_date: formData.promotion_end_date || null,
         sponsor_registration_id: sponsorRegistrationId || null,
+        city: formData.city || null,
+        state: formData.state || null,
       };
 
       const { error } = await supabase
@@ -194,6 +221,38 @@ export default function CreatePromotion() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Se cadastros bloqueados e não é admin, mostrar mensagem
+  if (!promotionsEnabled && !isAdmin) {
+    return (
+      <div className="min-h-screen bg-background p-6">
+        <div className="max-w-2xl mx-auto space-y-6">
+          <Button
+            variant="ghost"
+            onClick={() => navigate(getBackRoute())}
+            className="mb-4"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Voltar
+          </Button>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Cadastros Bloqueados</CardTitle>
+              <CardDescription>
+                Novos cadastros de promoções estão temporariamente bloqueados pelo administrador.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">
+                Entre em contato com o administrador para mais informações.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
@@ -337,6 +396,33 @@ export default function CreatePromotion() {
                     setFormData({ ...formData, promotion_end_date: e.target.value })
                   }
                 />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="city">Cidade</Label>
+                  <Input
+                    id="city"
+                    value={formData.city}
+                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                    placeholder="Digite a cidade"
+                    className={isAdmin ? "bg-background" : "bg-yellow-200 dark:bg-yellow-900"}
+                    disabled={!isAdmin && !!sponsorData?.city}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="state">UF</Label>
+                  <Input
+                    id="state"
+                    value={formData.state}
+                    onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                    placeholder="Ex: SP"
+                    maxLength={2}
+                    className={isAdmin ? "bg-background" : "bg-yellow-200 dark:bg-yellow-900"}
+                    disabled={!isAdmin && !!sponsorData?.state}
+                  />
+                </div>
               </div>
 
               <Button 

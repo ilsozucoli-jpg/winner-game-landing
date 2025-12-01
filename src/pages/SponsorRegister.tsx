@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,25 +18,27 @@ const PLAN_OPTIONS = [
 
 export default function SponsorRegister() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const [user, setUser] = useState<any>(null);
   const [uploading, setUploading] = useState(false);
   const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
   const [paymentProofPreview, setPaymentProofPreview] = useState<string>('');
+  const renewalData = location.state?.renewalData;
+  const isRenewal = !!renewalData;
+  
   const [formData, setFormData] = useState({
-    name: '',
-    address: '',
-    city: '',
-    state: '',
-    company: '',
+    name: renewalData?.name || '',
+    address: renewalData?.address || '',
+    city: renewalData?.city || '',
+    state: renewalData?.state || '',
+    company: renewalData?.company || '',
     plan: 'monthly',
-    phone: '',
-    email: '',
+    phone: renewalData?.phone || '',
+    email: renewalData?.email || '',
     password: '',
     confirmPassword: '',
   });
-
-  // Removido checkAuth - não precisa estar autenticado para se registrar
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -196,7 +198,7 @@ export default function SponsorRegister() {
       <div className="max-w-2xl mx-auto space-y-6 animate-slide-up">
         <Button
           variant="ghost"
-          onClick={() => navigate('/register')}
+          onClick={() => navigate(isRenewal ? '/sponsor-dashboard' : '/register')}
           className="mb-4"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
@@ -221,7 +223,7 @@ export default function SponsorRegister() {
                   placeholder="Seu nome"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="bg-background"
+                  className={isRenewal && renewalData?.name ? "bg-yellow-100 dark:bg-yellow-900/30" : "bg-background"}
                   required
                 />
               </div>
@@ -234,7 +236,7 @@ export default function SponsorRegister() {
                   placeholder="Nome da empresa"
                   value={formData.company}
                   onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                  className="bg-background"
+                  className={isRenewal && renewalData?.company ? "bg-yellow-100 dark:bg-yellow-900/30" : "bg-background"}
                   required
                 />
               </div>
@@ -249,7 +251,7 @@ export default function SponsorRegister() {
                   placeholder="(11) 99999-9999"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="bg-background"
+                  className={isRenewal && renewalData?.phone ? "bg-yellow-100 dark:bg-yellow-900/30" : "bg-background"}
                   required
                 />
               </div>
@@ -262,7 +264,7 @@ export default function SponsorRegister() {
                   placeholder="seu@email.com"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="bg-background"
+                  className={isRenewal && renewalData?.email ? "bg-yellow-100 dark:bg-yellow-900/30" : "bg-background"}
                   required
                 />
               </div>
@@ -298,15 +300,15 @@ export default function SponsorRegister() {
 
             <div className="space-y-2">
               <Label htmlFor="address">Endereço *</Label>
-              <Input
-                id="address"
-                type="text"
-                placeholder="Rua, número, complemento"
-                value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                className="bg-background"
-                required
-              />
+                <Input
+                  id="address"
+                  type="text"
+                  placeholder="Rua, número, complemento"
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  className={isRenewal && renewalData?.address ? "bg-yellow-100 dark:bg-yellow-900/30" : "bg-background"}
+                  required
+                />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -318,7 +320,7 @@ export default function SponsorRegister() {
                   placeholder="Sua cidade"
                   value={formData.city}
                   onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                  className="bg-background"
+                  className={isRenewal && renewalData?.city ? "bg-yellow-100 dark:bg-yellow-900/30" : "bg-background"}
                   required
                 />
               </div>
@@ -332,7 +334,7 @@ export default function SponsorRegister() {
                   maxLength={2}
                   value={formData.state}
                   onChange={(e) => setFormData({ ...formData, state: e.target.value.toUpperCase() })}
-                  className="bg-background"
+                  className={isRenewal && renewalData?.state ? "bg-yellow-100 dark:bg-yellow-900/30" : "bg-background"}
                   required
                 />
               </div>

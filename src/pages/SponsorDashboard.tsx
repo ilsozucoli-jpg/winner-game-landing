@@ -256,7 +256,19 @@ export default function SponsorDashboard() {
               <div className="pt-4 space-y-2">
                 {isValidityExpired() && (
                   <Button 
-                    onClick={() => navigate('/sponsor-register')} 
+                    onClick={() => navigate('/sponsor-register', { 
+                      state: { 
+                        renewalData: {
+                          name: sponsorData.name,
+                          address: sponsorData.address,
+                          city: sponsorData.city,
+                          state: sponsorData.state,
+                          company: sponsorData.company,
+                          phone: sponsorData.phone,
+                          email: sponsorData.email,
+                        }
+                      } 
+                    })} 
                     className="w-full animate-pulse bg-destructive hover:bg-destructive/90 text-destructive-foreground"
                     size="lg"
                     variant="destructive"

@@ -108,6 +108,34 @@ export default function SponsorDashboard() {
     navigate('/');
   };
 
+  const handleCreatePromotion = async () => {
+    try {
+      const { data: setting, error } = await supabase
+        .from('system_settings')
+        .select('setting_value')
+        .eq('setting_key', 'promotions_registration_enabled')
+        .single();
+
+      if (error) throw error;
+
+      const isEnabled = (setting?.setting_value as { enabled: boolean })?.enabled ?? true;
+
+      if (!isEnabled) {
+        toast({
+          title: "Cadastro Bloqueado",
+          description: "O cadastro de novas promoções está temporariamente bloqueado.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      navigate(`/create-promotion?sponsor_id=${sponsorData.id}`);
+    } catch (error) {
+      console.error('Error checking promotion status:', error);
+      navigate(`/create-promotion?sponsor_id=${sponsorData.id}`);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
       pending: { label: 'Pendente', variant: 'secondary' },
@@ -279,7 +307,7 @@ export default function SponsorDashboard() {
                 )}
                 
                 <Button 
-                  onClick={() => navigate(`/create-promotion?sponsor_id=${sponsorData.id}`)} 
+                  onClick={handleCreatePromotion} 
                   className="w-full"
                   size="lg"
                   disabled={isValidityExpired()}

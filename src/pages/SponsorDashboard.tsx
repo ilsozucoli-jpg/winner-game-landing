@@ -279,7 +279,7 @@ export default function SponsorDashboard() {
                 )}
                 
                 <Button 
-                  onClick={() => navigate('/create-promotion')} 
+                  onClick={() => navigate(`/create-promotion?sponsor_id=${sponsorData.id}`)} 
                   className="w-full"
                   size="lg"
                   disabled={isValidityExpired()}

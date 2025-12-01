@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,6 +12,8 @@ import { ArrowLeft, Loader2, Upload } from 'lucide-react';
 export default function CreatePromotion() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+  const sponsorRegistrationId = searchParams.get('sponsor_id');
   const [loading, setLoading] = useState(false);
   const [verifying, setVerifying] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -159,6 +161,7 @@ export default function CreatePromotion() {
         prize_description: formData.prize_description,
         prize_count: formData.prize_count,
         promotion_end_date: formData.promotion_end_date || null,
+        sponsor_registration_id: sponsorRegistrationId || null,
       };
 
       const { error } = await supabase

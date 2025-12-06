@@ -41,9 +41,13 @@ export default function AdminPanel() {
   const [approvingRegistration, setApprovingRegistration] = useState(false);
   const [editingValidityDate, setEditingValidityDate] = useState(false);
   const [newValidityDate, setNewValidityDate] = useState('');
-  const [activeSection, setActiveSection] = useState<'users' | 'delete' | 'password' | 'list' | 'shortcuts' | 'sponsors-list' | 'registrations'>('users');
+  const [activeSection, setActiveSection] = useState<'users' | 'delete' | 'password' | 'list' | 'shortcuts' | 'sponsors-list' | 'registrations' | 'pending-promotions'>('users');
   const [promotionsEnabled, setPromotionsEnabled] = useState(true);
   const [togglingPromotions, setTogglingPromotions] = useState(false);
+  const [pendingPromotions, setPendingPromotions] = useState<any[]>([]);
+  const [loadingPendingPromotions, setLoadingPendingPromotions] = useState(false);
+  const [approvingPromotion, setApprovingPromotion] = useState(false);
+  const [selectedPendingPromotion, setSelectedPendingPromotion] = useState<any | null>(null);
 
   useEffect(() => {
     checkAdminStatus();
@@ -135,6 +139,83 @@ export default function AdminPanel() {
       });
     } finally {
       setLoadingSponsorRegistrations(false);
+    }
+  };
+
+  const loadPendingPromotions = async () => {
+    setLoadingPendingPromotions(true);
+    try {
+      const { data, error } = await supabase
+        .from('pending_promotions')
+        .select('*')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setPendingPromotions(data || []);
+    } catch (error: any) {
+      toast({
+        title: "Erro ao carregar promoções pendentes",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingPendingPromotions(false);
+    }
+  };
+
+  const handleApprovePromotion = async (promotion: any, approve: boolean) => {
+    if (!confirm(`Tem certeza que deseja ${approve ? 'aprovar' : 'rejeitar'} esta promoção?`)) {
+      return;
+    }
+
+    setApprovingPromotion(true);
+    try {
+      if (approve) {
+        // Inserir na tabela sponsors
+        const sponsorData = {
+          user_id: promotion.user_id,
+          sponsor_registration_id: promotion.sponsor_registration_id,
+          name: promotion.name,
+          phone: promotion.phone,
+          logo_url: promotion.logo_url,
+          prize_description: promotion.prize_description,
+          prize_count: promotion.prize_count,
+          promotion_end_date: promotion.promotion_end_date,
+          city: promotion.city,
+          state: promotion.state,
+        };
+
+        const { error: insertError } = await supabase
+          .from('sponsors')
+          .insert(sponsorData);
+
+        if (insertError) throw insertError;
+      }
+
+      // Excluir da tabela pending_promotions
+      const { error: deleteError } = await supabase
+        .from('pending_promotions')
+        .delete()
+        .eq('id', promotion.id);
+
+      if (deleteError) throw deleteError;
+
+      toast({
+        title: "Sucesso!",
+        description: `Promoção ${approve ? 'aprovada' : 'rejeitada'} com sucesso.`,
+      });
+
+      setSelectedPendingPromotion(null);
+      loadPendingPromotions();
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setApprovingPromotion(false);
     }
   };
 
@@ -587,6 +668,7 @@ export default function AdminPanel() {
 
   const menuButtons = [
     { id: 'create-promotion', label: 'Cadastrar nova promoção', icon: Settings, color: 'bg-blue-500 hover:bg-blue-600', isNavigation: true },
+    { id: 'pending-promotions', label: 'Promoções Pendentes', icon: CheckCircle, color: 'bg-yellow-500 hover:bg-yellow-600' },
     { id: 'sponsors-list', label: 'Promoções', icon: Users, color: 'bg-indigo-500 hover:bg-indigo-600' },
     { id: 'registrations', label: 'Patrocinadores', icon: Store, color: 'bg-orange-500 hover:bg-orange-600' },
     { id: 'users', label: 'Criar Admin', icon: UserPlus, color: 'bg-green-500 hover:bg-green-600' },
@@ -653,6 +735,7 @@ export default function AdminPanel() {
                     if (button.id === 'list') loadUsers();
                     if (button.id === 'sponsors-list') loadSponsors();
                     if (button.id === 'registrations') loadSponsorRegistrations();
+                    if (button.id === 'pending-promotions') loadPendingPromotions();
                   }
                 }}
                 className={`${button.color} text-white h-24 flex flex-col items-center justify-center gap-2 transition-all`}
@@ -715,6 +798,93 @@ export default function AdminPanel() {
                 </form>
               </CardContent>
             </Card>
+        )}
+
+        {activeSection === 'pending-promotions' && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Promoções Pendentes de Aprovação</CardTitle>
+              <CardDescription>Promoções criadas por patrocinadores aguardando sua aprovação</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loadingPendingPromotions ? (
+                <div className="flex justify-center p-8">
+                  <Loader2 className="h-8 w-8 animate-spin" />
+                </div>
+              ) : pendingPromotions.length === 0 ? (
+                <p className="text-center text-muted-foreground p-8">Nenhuma promoção pendente de aprovação</p>
+              ) : (
+                <div className="space-y-4">
+                  {pendingPromotions.map((promotion) => (
+                    <div key={promotion.id} className="border border-border rounded-lg p-4">
+                      <div className="flex justify-between items-start">
+                        <div className="flex gap-4">
+                          {promotion.logo_url && (
+                            <img 
+                              src={promotion.logo_url} 
+                              alt={promotion.name || 'Logo'}
+                              className="w-16 h-16 object-contain rounded"
+                            />
+                          )}
+                          <div>
+                            <p className="font-medium">{promotion.name || 'Sem nome'}</p>
+                            <p className="text-sm text-muted-foreground">{promotion.prize_description}</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Telefone: {promotion.phone}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Prêmios: {promotion.prize_count}
+                            </p>
+                            {promotion.promotion_end_date && (
+                              <p className="text-xs text-muted-foreground">
+                                Término: {new Date(promotion.promotion_end_date).toLocaleDateString('pt-BR')}
+                              </p>
+                            )}
+                            <p className="text-xs text-muted-foreground">
+                              Criado em: {new Date(promotion.created_at).toLocaleDateString('pt-BR')}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={() => handleApprovePromotion(promotion, true)}
+                            disabled={approvingPromotion}
+                            className="bg-green-500 hover:bg-green-600"
+                          >
+                            {approvingPromotion ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <>
+                                <CheckCircle className="h-4 w-4 mr-1" />
+                                Aprovar
+                              </>
+                            )}
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleApprovePromotion(promotion, false)}
+                            disabled={approvingPromotion}
+                          >
+                            {approvingPromotion ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <>
+                                <XCircle className="h-4 w-4 mr-1" />
+                                Rejeitar
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         )}
 
         {activeSection === 'delete' && (

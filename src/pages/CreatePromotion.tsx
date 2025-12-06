@@ -186,36 +186,45 @@ export default function CreatePromotion() {
         prize_description: formData.prize_description,
         prize_count: formData.prize_count,
         promotion_end_date: formData.promotion_end_date || null,
-        sponsor_registration_id: sponsorRegistrationId || null,
+        sponsor_registration_id: sponsorRegistrationId || sponsorData?.id || null,
         city: formData.city || null,
         state: formData.state || null,
       };
 
-      console.log('Dados para inserção:', JSON.stringify(insertData, null, 2));
-      console.log('User ID autenticado:', session.user.id);
-      console.log('É patrocinador aprovado?', !!sponsorData && sponsorData.status === 'approved');
-      
-      const { data: insertedData, error } = await supabase
-        .from('sponsors')
-        .insert(insertData)
-        .select();
+      // Admin insere direto na tabela sponsors, patrocinador vai para pending_promotions
+      if (isAdmin) {
+        const { error } = await supabase
+          .from('sponsors')
+          .insert(insertData);
 
-      if (error) {
-        console.error('Erro RLS/DB ao inserir promoção:', {
-          code: error.code,
-          message: error.message,
-          details: error.details,
-          hint: error.hint
+        if (error) {
+          throw new Error(error.message || 'Erro ao cadastrar promoção');
+        }
+
+        toast({
+          title: "Sucesso!",
+          description: "Promoção cadastrada com sucesso.",
         });
-        throw new Error(error.message || 'Erro ao cadastrar promoção');
-      }
-      
-      console.log('Promoção inserida com sucesso:', insertedData);
+      } else {
+        // Patrocinador cria na tabela temporária
+        const pendingData = {
+          ...insertData,
+          status: 'pending'
+        };
 
-      toast({
-        title: "Sucesso!",
-        description: "Promoção cadastrada com sucesso.",
-      });
+        const { error } = await supabase
+          .from('pending_promotions')
+          .insert(pendingData);
+
+        if (error) {
+          throw new Error(error.message || 'Erro ao cadastrar promoção');
+        }
+
+        toast({
+          title: "Promoção enviada!",
+          description: "Sua promoção foi enviada para aprovação do administrador.",
+        });
+      }
 
       navigate(getBackRoute());
     } catch (error: any) {

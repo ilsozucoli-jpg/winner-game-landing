@@ -64,6 +64,65 @@ export type Database = {
           },
         ]
       }
+      pending_promotions: {
+        Row: {
+          city: string | null
+          created_at: string
+          id: string
+          logo_url: string | null
+          name: string | null
+          phone: string
+          prize_count: number
+          prize_description: string
+          promotion_end_date: string | null
+          sponsor_registration_id: string | null
+          state: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          city?: string | null
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          name?: string | null
+          phone: string
+          prize_count?: number
+          prize_description: string
+          promotion_end_date?: string | null
+          sponsor_registration_id?: string | null
+          state?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          city?: string | null
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          name?: string | null
+          phone?: string
+          prize_count?: number
+          prize_description?: string
+          promotion_end_date?: string | null
+          sponsor_registration_id?: string | null
+          state?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pending_promotions_sponsor_registration_id_fkey"
+            columns: ["sponsor_registration_id"]
+            isOneToOne: false
+            referencedRelation: "sponsor_registrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string | null

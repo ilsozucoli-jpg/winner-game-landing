@@ -25,7 +25,12 @@ interface Participation {
     phone: string;
     city: string | null;
     state: string | null;
+    prize_count: number;
+    promotion_end_date: string | null;
   } | null;
+  rankingPosition?: number;
+  isPromotionEnded?: boolean;
+  isWinnerByRanking?: boolean;
 }
 
 interface CertificateData {
@@ -94,7 +99,7 @@ export default function PlayerDashboard() {
       if (sponsorIds.length > 0) {
         const { data: sponsors } = await supabase
           .from('sponsors')
-          .select('id, name, logo_url, prize_description, phone, city, state')
+          .select('id, name, logo_url, prize_description, phone, city, state, prize_count, promotion_end_date')
           .in('id', sponsorIds);
         
         if (sponsors) {
@@ -102,14 +107,61 @@ export default function PlayerDashboard() {
         }
       }
 
-      // Processar resultados
-      const processedResults = (results || []).map(r => ({
-        ...r,
-        sponsor: sponsorsMap[r.sponsor_id] || null
-      }));
+      // Para cada promoção encerrada, verificar posição no ranking
+      const processedResults: Participation[] = [];
+      
+      for (const r of (results || [])) {
+        const sponsor = sponsorsMap[r.sponsor_id] || null;
+        const isPromotionEnded = sponsor?.promotion_end_date 
+          ? new Date(sponsor.promotion_end_date) < new Date() 
+          : false;
+        
+        let rankingPosition: number | undefined;
+        let isWinnerByRanking = false;
+        
+        // Se a promoção encerrou, buscar posição no ranking
+        if (isPromotionEnded && sponsor) {
+          const { data: ranking } = await supabase
+            .from('game_results')
+            .select('player_email, points')
+            .eq('sponsor_id', r.sponsor_id)
+            .order('points', { ascending: false });
+          
+          if (ranking) {
+            // Agrupar por email e pegar melhor pontuação
+            const playerBestScores = new Map<string, number>();
+            ranking.forEach(entry => {
+              const current = playerBestScores.get(entry.player_email) || 0;
+              if (entry.points > current) {
+                playerBestScores.set(entry.player_email, entry.points);
+              }
+            });
+            
+            // Ordenar por pontuação
+            const sortedPlayers = Array.from(playerBestScores.entries())
+              .sort((a, b) => b[1] - a[1]);
+            
+            // Encontrar posição do jogador atual
+            const playerPosition = sortedPlayers.findIndex(([email]) => email === profile.email);
+            if (playerPosition !== -1) {
+              rankingPosition = playerPosition + 1;
+              // Verificar se está entre os vencedores
+              isWinnerByRanking = rankingPosition <= (sponsor.prize_count || 1);
+            }
+          }
+        }
+        
+        processedResults.push({
+          ...r,
+          sponsor,
+          rankingPosition,
+          isPromotionEnded,
+          isWinnerByRanking
+        });
+      }
 
       setParticipations(processedResults);
-      setWonPrizes(processedResults.filter(r => r.is_winner === true));
+      setWonPrizes(processedResults.filter(r => r.is_winner === true || r.isWinnerByRanking === true));
 
     } catch (error: any) {
       console.error('Erro ao carregar dados:', error);
@@ -317,46 +369,81 @@ export default function PlayerDashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {participations.map((participation) => (
-                <div
-                  key={participation.id}
-                  className="p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
-                >
-                  <div className="flex items-center gap-4">
-                    {participation.sponsor?.logo_url && (
-                      <img 
-                        src={participation.sponsor.logo_url} 
-                        alt={participation.sponsor.name || 'Patrocinador'} 
-                        className="w-12 h-12 object-cover rounded-lg"
-                      />
-                    )}
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-bold text-foreground">
-                          {participation.sponsor?.name || 'Promoção'}
-                        </h3>
-                        {participation.is_winner && (
-                          <span className="px-2 py-0.5 bg-accent text-accent-foreground text-xs font-bold rounded-full">
-                            VENCEDOR
-                          </span>
+              {participations.map((participation) => {
+                const isWinner = participation.is_winner || participation.isWinnerByRanking;
+                
+                return (
+                  <div
+                    key={participation.id}
+                    className={`p-4 rounded-lg border transition-colors ${
+                      isWinner && participation.isPromotionEnded
+                        ? 'bg-accent/10 border-accent'
+                        : 'bg-card hover:bg-muted/50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-4">
+                      {participation.sponsor?.logo_url && (
+                        <img 
+                          src={participation.sponsor.logo_url} 
+                          alt={participation.sponsor.name || 'Patrocinador'} 
+                          className="w-12 h-12 object-cover rounded-lg"
+                        />
+                      )}
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-bold text-foreground">
+                            {participation.sponsor?.name || 'Promoção'}
+                          </h3>
+                          {participation.isPromotionEnded && (
+                            <span className="px-2 py-0.5 bg-muted text-muted-foreground text-xs font-medium rounded-full">
+                              ENCERRADA
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {participation.sponsor?.prize_description}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Jogado em: {format(new Date(participation.completed_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                        </p>
+                        {participation.rankingPosition && participation.isPromotionEnded && (
+                          <p className="text-xs text-primary mt-1">
+                            Posição no ranking: {participation.rankingPosition}º lugar
+                          </p>
                         )}
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        {participation.sponsor?.prize_description}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Jogado em: {format(new Date(participation.completed_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-xl font-bold text-primary">
-                        {participation.points.toLocaleString('pt-BR')}
+                      <div className="text-right">
+                        <div className="text-xl font-bold text-primary">
+                          {participation.points.toLocaleString('pt-BR')}
+                        </div>
+                        <div className="text-xs text-muted-foreground">pontos</div>
                       </div>
-                      <div className="text-xs text-muted-foreground">pontos</div>
                     </div>
+                    
+                    {/* Aviso de vitória para promoção encerrada */}
+                    {isWinner && participation.isPromotionEnded && (
+                      <div className="mt-4 pt-4 border-t border-accent/30">
+                        <div className="text-center mb-3">
+                          <p className="text-2xl font-black text-accent uppercase tracking-wide animate-pulse">
+                            🏆 VOCÊ VENCEU! 🎉
+                          </p>
+                          <p className="text-lg font-bold text-accent">
+                            você venceu
+                          </p>
+                        </div>
+                        <Button
+                          variant="destructive"
+                          className="w-full"
+                          onClick={() => handleOpenCertificate(participation)}
+                        >
+                          <Award className="w-5 h-5 mr-2" />
+                          EMITIR COMPROVANTE DE VITÓRIA
+                        </Button>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </CardContent>
           </Card>
         )}

@@ -14,82 +14,64 @@ export default function Auth() {
   const [password, setPassword] = useState('');
   const [isLogin, setIsLogin] = useState(true);
 
+  const redirectUser = async (userId: string) => {
+    // Check if admin
+    const { data: roleData } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId)
+      .eq('role', 'admin')
+      .single();
+
+    if (roleData) {
+      navigate('/admin');
+      return;
+    }
+
+    // Check if sponsor
+    const { data: sponsorData } = await supabase
+      .from('sponsor_registrations')
+      .select('id')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (sponsorData) {
+      navigate('/sponsor-dashboard');
+      return;
+    }
+
+    // Check profile for terms and player registration
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('terms_accepted_at, name')
+      .eq('id', userId)
+      .single();
+
+    if (!profile?.terms_accepted_at) {
+      navigate('/terms-acceptance');
+      return;
+    }
+
+    // If player has name (registered as player), go to player dashboard
+    if (profile?.name) {
+      navigate('/player-dashboard');
+      return;
+    }
+
+    // New user, go to role selection
+    navigate('/role-selection');
+  };
+
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session) {
-        const { data: roleData } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', session.user.id)
-          .eq('role', 'admin')
-          .single();
-
-        if (roleData) {
-          navigate('/admin');
-        } else {
-          // Check if user is a sponsor
-          const { data: sponsorData } = await supabase
-            .from('sponsor_registrations')
-            .select('id')
-            .eq('user_id', session.user.id)
-            .maybeSingle();
-
-          if (sponsorData) {
-            navigate('/sponsor-dashboard');
-          } else {
-            // Check if user has accepted terms
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('terms_accepted_at')
-              .eq('id', session.user.id)
-              .single();
-
-            if (profile?.terms_accepted_at) {
-              navigate('/role-selection');
-            } else {
-              navigate('/terms-acceptance');
-            }
-          }
-        }
+        await redirectUser(session.user.id);
       }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session && event === 'SIGNED_IN') {
-        const { data: roleData } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', session.user.id)
-          .eq('role', 'admin')
-          .single();
-
-        if (roleData) {
-          navigate('/admin');
-        } else {
-          // Check if user is a sponsor
-          const { data: sponsorData } = await supabase
-            .from('sponsor_registrations')
-            .select('id')
-            .eq('user_id', session.user.id)
-            .maybeSingle();
-
-          if (sponsorData) {
-            navigate('/sponsor-dashboard');
-          } else {
-            // Check if user has accepted terms
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('terms_accepted_at')
-              .eq('id', session.user.id)
-              .single();
-
-            if (profile?.terms_accepted_at) {
-              navigate('/role-selection');
-            } else {
-              navigate('/terms-acceptance');
-            }
-          }
-        }
+        await redirectUser(session.user.id);
       }
     });
 
@@ -137,18 +119,8 @@ export default function Auth() {
             if (sponsorData) {
               navigate('/sponsor-dashboard');
             } else {
-              // Check if user has accepted terms for newly logged in users
-              const { data: profile } = await supabase
-                .from('profiles')
-                .select('terms_accepted_at')
-                .eq('id', data.user.id)
-                .single();
-
-              if (profile?.terms_accepted_at) {
-                navigate('/role-selection');
-              } else {
-                navigate('/terms-acceptance');
-              }
+              // Redirect to appropriate page
+              await redirectUser(data.user.id);
             }
           }
         }

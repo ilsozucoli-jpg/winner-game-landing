@@ -27,6 +27,10 @@ export default function Results() {
     if (!userData || !selectedSponsor) return;
 
     try {
+      // Get current user session
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user?.id || null;
+
       // Check if player already has a result for this sponsor
       const { data: existingResults, error: fetchError } = await supabase
         .from('game_results')
@@ -47,6 +51,7 @@ export default function Results() {
               completed_at: new Date().toISOString(),
               player_phone: userData.phone,
               player_email: userData.email,
+              user_id: userId,
             })
             .eq('id', existingResult.id);
 
@@ -67,6 +72,7 @@ export default function Results() {
             sponsor_id: selectedSponsor.id,
             points: totalPoints,
             completed_at: new Date().toISOString(),
+            user_id: userId,
           });
 
         if (insertError) throw insertError;

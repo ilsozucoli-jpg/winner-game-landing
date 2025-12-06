@@ -19,31 +19,40 @@ export type Database = {
           completed_at: string
           created_at: string
           id: string
+          is_winner: boolean | null
           player_email: string
           player_name: string
           player_phone: string
           points: number
+          prize_claimed_at: string | null
           sponsor_id: string
+          user_id: string | null
         }
         Insert: {
           completed_at?: string
           created_at?: string
           id?: string
+          is_winner?: boolean | null
           player_email: string
           player_name: string
           player_phone: string
           points?: number
+          prize_claimed_at?: string | null
           sponsor_id: string
+          user_id?: string | null
         }
         Update: {
           completed_at?: string
           created_at?: string
           id?: string
+          is_winner?: boolean | null
           player_email?: string
           player_name?: string
           player_phone?: string
           points?: number
+          prize_claimed_at?: string | null
           sponsor_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {

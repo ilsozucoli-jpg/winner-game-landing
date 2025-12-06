@@ -191,14 +191,26 @@ export default function CreatePromotion() {
         state: formData.state || null,
       };
 
-      const { error } = await supabase
+      console.log('Dados para inserção:', JSON.stringify(insertData, null, 2));
+      console.log('User ID autenticado:', session.user.id);
+      console.log('É patrocinador aprovado?', !!sponsorData && sponsorData.status === 'approved');
+      
+      const { data: insertedData, error } = await supabase
         .from('sponsors')
-        .insert(insertData);
+        .insert(insertData)
+        .select();
 
       if (error) {
-        console.error('Erro ao inserir promoção:', error);
+        console.error('Erro RLS/DB ao inserir promoção:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        });
         throw new Error(error.message || 'Erro ao cadastrar promoção');
       }
+      
+      console.log('Promoção inserida com sucesso:', insertedData);
 
       toast({
         title: "Sucesso!",

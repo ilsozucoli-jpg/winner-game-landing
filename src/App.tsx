@@ -19,6 +19,7 @@ import SponsorDashboard from "./pages/SponsorDashboard";
 import TermsAcceptance from "./pages/TermsAcceptance";
 import RoleSelection from "./pages/RoleSelection";
 import PlayerRegister from "./pages/PlayerRegister";
+import PlayerDashboard from "./pages/PlayerDashboard";
 import CreatePromotion from "./pages/CreatePromotion";
 import NotFound from "./pages/NotFound";
 
@@ -45,6 +46,7 @@ const App = () => (
             <Route path="/terms-acceptance" element={<TermsAcceptance />} />
             <Route path="/role-selection" element={<RoleSelection />} />
             <Route path="/player-register" element={<PlayerRegister />} />
+            <Route path="/player-dashboard" element={<PlayerDashboard />} />
             <Route path="/create-promotion" element={<CreatePromotion />} />
             <Route path="/admin" element={<AdminPanel />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

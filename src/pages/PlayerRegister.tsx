@@ -62,8 +62,8 @@ export default function PlayerRegister() {
         .single();
 
       if (profile?.name) {
-        // Já tem cadastro, redirecionar para seleção de promoção
-        navigate('/sponsor-selection');
+        // Já tem cadastro, redirecionar para dashboard do jogador
+        navigate('/player-dashboard');
       }
     } catch (error: any) {
       console.error('Erro ao verificar autenticação:', error);
@@ -127,7 +127,7 @@ export default function PlayerRegister() {
         className: "bg-success text-success-foreground",
       });
 
-      navigate('/sponsor-selection');
+      navigate('/player-dashboard');
     } catch (error: any) {
       toast({
         title: "Erro",

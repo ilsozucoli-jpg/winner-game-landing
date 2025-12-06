@@ -45,7 +45,7 @@ export default function RoleSelection() {
         .single();
 
       if (profile?.name) {
-        navigate('/sponsor-selection');
+        navigate('/player-dashboard');
         return;
       }
 

@@ -48,6 +48,12 @@ export default function AdminPanel() {
   const [loadingPendingPromotions, setLoadingPendingPromotions] = useState(false);
   const [approvingPromotion, setApprovingPromotion] = useState(false);
   const [selectedPendingPromotion, setSelectedPendingPromotion] = useState<any | null>(null);
+  const [sponsorSearchDialogOpen, setSponsorSearchDialogOpen] = useState(false);
+  const [sponsorSearchQuery, setSponsorSearchQuery] = useState('');
+  const [sponsorSearchResults, setSponsorSearchResults] = useState<any[]>([]);
+  const [searchingSponsors, setSearchingSponsors] = useState(false);
+  const [selectedPromotionForSponsor, setSelectedPromotionForSponsor] = useState<any | null>(null);
+  const [updatingSponsor, setUpdatingSponsor] = useState(false);
 
   useEffect(() => {
     checkAdminStatus();
@@ -216,6 +222,70 @@ export default function AdminPanel() {
       });
     } finally {
       setApprovingPromotion(false);
+    }
+  };
+
+  const handleSearchSponsor = async () => {
+    if (!sponsorSearchQuery.trim()) return;
+    
+    setSearchingSponsors(true);
+    try {
+      const { data, error } = await supabase
+        .from('sponsor_registrations')
+        .select('*')
+        .eq('status', 'approved')
+        .or(`name.ilike.%${sponsorSearchQuery}%,company.ilike.%${sponsorSearchQuery}%`)
+        .limit(10);
+
+      if (error) throw error;
+      setSponsorSearchResults(data || []);
+    } catch (error: any) {
+      toast({
+        title: "Erro ao buscar patrocinadores",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSearchingSponsors(false);
+    }
+  };
+
+  const handleAssociateSponsor = async (sponsorRegistration: any) => {
+    if (!selectedPromotionForSponsor) return;
+    
+    setUpdatingSponsor(true);
+    try {
+      const { error } = await supabase
+        .from('pending_promotions')
+        .update({
+          sponsor_registration_id: sponsorRegistration.id,
+          name: sponsorRegistration.company,
+          phone: sponsorRegistration.phone,
+          city: sponsorRegistration.city,
+          state: sponsorRegistration.state,
+        })
+        .eq('id', selectedPromotionForSponsor.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso!",
+        description: "Patrocinador associado com sucesso.",
+      });
+
+      setSponsorSearchDialogOpen(false);
+      setSponsorSearchQuery('');
+      setSponsorSearchResults([]);
+      setSelectedPromotionForSponsor(null);
+      loadPendingPromotions();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao associar patrocinador",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setUpdatingSponsor(false);
     }
   };
 
@@ -801,32 +871,32 @@ export default function AdminPanel() {
         )}
 
         {activeSection === 'pending-promotions' && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Promoções Pendentes de Aprovação</CardTitle>
-              <CardDescription>Promoções criadas por patrocinadores aguardando sua aprovação</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {loadingPendingPromotions ? (
-                <div className="flex justify-center p-8">
-                  <Loader2 className="h-8 w-8 animate-spin" />
-                </div>
-              ) : pendingPromotions.length === 0 ? (
-                <p className="text-center text-muted-foreground p-8">Nenhuma promoção pendente de aprovação</p>
-              ) : (
-                <div className="space-y-4">
-                  {pendingPromotions.map((promotion) => (
-                    <div key={promotion.id} className="border border-border rounded-lg p-4">
-                      <div className="flex justify-between items-start">
+          <>
+            <Card>
+              <CardHeader>
+                <CardTitle>Promoções Pendentes de Aprovação</CardTitle>
+                <CardDescription>Promoções criadas por patrocinadores aguardando sua aprovação</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loadingPendingPromotions ? (
+                  <div className="flex justify-center p-8">
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                  </div>
+                ) : pendingPromotions.length === 0 ? (
+                  <p className="text-center text-muted-foreground p-8">Nenhuma promoção pendente de aprovação</p>
+                ) : (
+                  <div className="space-y-4">
+                    {pendingPromotions.map((promotion) => (
+                      <div key={promotion.id} className="border border-border rounded-lg p-4">
                         <div className="flex gap-4">
                           {promotion.logo_url && (
                             <img 
                               src={promotion.logo_url} 
                               alt={promotion.name || 'Logo'}
-                              className="w-16 h-16 object-contain rounded"
+                              className="w-16 h-16 object-contain rounded flex-shrink-0"
                             />
                           )}
-                          <div>
+                          <div className="flex-1">
                             <p className="font-medium">{promotion.name || 'Sem nome'}</p>
                             <p className="text-sm text-muted-foreground">{promotion.prize_description}</p>
                             <p className="text-xs text-muted-foreground mt-1">
@@ -845,7 +915,18 @@ export default function AdminPanel() {
                             </p>
                           </div>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 mt-4 pt-4 border-t border-border">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedPromotionForSponsor(promotion);
+                              setSponsorSearchDialogOpen(true);
+                            }}
+                          >
+                            <Store className="h-4 w-4 mr-1" />
+                            Patrocinador
+                          </Button>
                           <Button
                             variant="default"
                             size="sm"
@@ -879,12 +960,88 @@ export default function AdminPanel() {
                           </Button>
                         </div>
                       </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Dialog open={sponsorSearchDialogOpen} onOpenChange={(open) => {
+              if (!open) {
+                setSponsorSearchDialogOpen(false);
+                setSponsorSearchQuery('');
+                setSponsorSearchResults([]);
+                setSelectedPromotionForSponsor(null);
+              }
+            }}>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Associar Patrocinador</DialogTitle>
+                  <DialogDescription>
+                    Pesquise por nome da empresa ou nome do patrocinador
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="flex gap-2">
+                    <Input
+                      type="text"
+                      value={sponsorSearchQuery}
+                      onChange={(e) => setSponsorSearchQuery(e.target.value)}
+                      placeholder="Digite o nome..."
+                      onKeyDown={(e) => e.key === 'Enter' && handleSearchSponsor()}
+                    />
+                    <Button 
+                      onClick={handleSearchSponsor} 
+                      disabled={searchingSponsors}
+                      variant="secondary"
+                    >
+                      {searchingSponsors ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        'Buscar'
+                      )}
+                    </Button>
+                  </div>
+
+                  {sponsorSearchResults.length > 0 && (
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {sponsorSearchResults.map((sponsor) => (
+                        <div 
+                          key={sponsor.id} 
+                          className="border border-border rounded-lg p-3 cursor-pointer hover:bg-muted/50 transition-colors"
+                          onClick={() => handleAssociateSponsor(sponsor)}
+                        >
+                          <p className="font-medium">{sponsor.company}</p>
+                          <p className="text-sm text-muted-foreground">{sponsor.name}</p>
+                          <p className="text-xs text-muted-foreground">{sponsor.city} - {sponsor.state}</p>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  )}
+
+                  {sponsorSearchResults.length === 0 && sponsorSearchQuery && !searchingSponsors && (
+                    <p className="text-center text-muted-foreground text-sm">
+                      Nenhum patrocinador encontrado
+                    </p>
+                  )}
+
+                  <div className="flex justify-end pt-4 border-t">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setSponsorSearchDialogOpen(false);
+                        setSponsorSearchQuery('');
+                        setSponsorSearchResults([]);
+                        setSelectedPromotionForSponsor(null);
+                      }}
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </DialogContent>
+            </Dialog>
+          </>
         )}
 
         {activeSection === 'delete' && (

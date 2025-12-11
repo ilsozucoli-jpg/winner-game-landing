@@ -10,7 +10,8 @@ import { createAdminUser } from '@/lib/adminUtils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Settings, Users, UserX, Key, List, Zap, Store, CheckCircle, XCircle } from 'lucide-react';
+import { Settings, Users, UserX, Key, List, Zap, Store, CheckCircle, XCircle, Cog } from 'lucide-react';
+import { Label } from '@/components/ui/label';
 
 export default function AdminPanel() {
   const navigate = useNavigate();
@@ -41,7 +42,14 @@ export default function AdminPanel() {
   const [approvingRegistration, setApprovingRegistration] = useState(false);
   const [editingValidityDate, setEditingValidityDate] = useState(false);
   const [newValidityDate, setNewValidityDate] = useState('');
-  const [activeSection, setActiveSection] = useState<'users' | 'delete' | 'password' | 'list' | 'shortcuts' | 'sponsors-list' | 'registrations' | 'pending-promotions'>('users');
+  const [activeSection, setActiveSection] = useState<'users' | 'delete' | 'password' | 'list' | 'shortcuts' | 'sponsors-list' | 'registrations' | 'pending-promotions' | 'config'>('users');
+  const [promotionLimits, setPromotionLimits] = useState({
+    basic_test_max_prizes: 10,
+    monthly_annual_max_prizes: 100,
+    basic_test_max_promotions: 3,
+    monthly_annual_max_promotions: 10
+  });
+  const [savingConfig, setSavingConfig] = useState(false);
   const [promotionsEnabled, setPromotionsEnabled] = useState(true);
   const [togglingPromotions, setTogglingPromotions] = useState(false);
   const [pendingPromotions, setPendingPromotions] = useState<any[]>([]);
@@ -58,7 +66,57 @@ export default function AdminPanel() {
   useEffect(() => {
     checkAdminStatus();
     loadPromotionsSetting();
+    loadPromotionLimits();
   }, []);
+
+  const loadPromotionLimits = async () => {
+    try {
+      const { data } = await supabase
+        .from('system_settings')
+        .select('setting_value')
+        .eq('setting_key', 'promotion_limits')
+        .single();
+
+      if (data?.setting_value) {
+        const limits = data.setting_value as any;
+        setPromotionLimits({
+          basic_test_max_prizes: limits.basic_test_max_prizes ?? 10,
+          monthly_annual_max_prizes: limits.monthly_annual_max_prizes ?? 100,
+          basic_test_max_promotions: limits.basic_test_max_promotions ?? 3,
+          monthly_annual_max_promotions: limits.monthly_annual_max_promotions ?? 10
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao carregar limites:', error);
+    }
+  };
+
+  const handleSaveConfig = async () => {
+    setSavingConfig(true);
+    try {
+      const { error } = await supabase
+        .from('system_settings')
+        .upsert({
+          setting_key: 'promotion_limits',
+          setting_value: promotionLimits
+        }, { onConflict: 'setting_key' });
+
+      if (error) throw error;
+
+      toast({
+        title: "Configurações salvas!",
+        description: "Os limites foram atualizados com sucesso.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSavingConfig(false);
+    }
+  };
 
   const loadUsers = async () => {
     setLoadingUsers(true);
@@ -739,6 +797,7 @@ export default function AdminPanel() {
   if (!isAdmin) return null;
 
   const menuButtons = [
+    { id: 'config', label: 'Configuração', icon: Cog, color: 'bg-gray-600 hover:bg-gray-700' },
     { id: 'create-promotion', label: 'Cadastrar nova promoção', icon: Settings, color: 'bg-blue-500 hover:bg-blue-600', isNavigation: true },
     { id: 'pending-promotions', label: 'Promoções Pendentes', icon: CheckCircle, color: 'bg-yellow-500 hover:bg-yellow-600' },
     { id: 'sponsors-list', label: 'Promoções', icon: Users, color: 'bg-indigo-500 hover:bg-indigo-600' },
@@ -820,6 +879,108 @@ export default function AdminPanel() {
           })}
         </div>
 
+        {activeSection === 'config' && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Configuração do Sistema</CardTitle>
+              <CardDescription>Defina os limites de prêmios e promoções</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4 p-4 border rounded-lg">
+                <h3 className="font-semibold text-lg">Patrocinadores</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Máx. prêmios/promoção (Plano Básico/Teste)</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={promotionLimits.basic_test_max_prizes}
+                      onChange={(e) => setPromotionLimits({
+                        ...promotionLimits,
+                        basic_test_max_prizes: Math.min(100, Math.max(1, parseInt(e.target.value) || 1))
+                      })}
+                    />
+                    <p className="text-xs text-muted-foreground">Mínimo: 1, Máximo: 100</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Máx. prêmios/promoção (Plano Mensal/Anual)</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={promotionLimits.monthly_annual_max_prizes}
+                      onChange={(e) => setPromotionLimits({
+                        ...promotionLimits,
+                        monthly_annual_max_prizes: Math.min(100, Math.max(1, parseInt(e.target.value) || 1))
+                      })}
+                    />
+                    <p className="text-xs text-muted-foreground">Mínimo: 1, Máximo: 100</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Máx. promoções/mês (Plano Básico/Teste)</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={promotionLimits.basic_test_max_promotions}
+                      onChange={(e) => setPromotionLimits({
+                        ...promotionLimits,
+                        basic_test_max_promotions: Math.min(100, Math.max(1, parseInt(e.target.value) || 1))
+                      })}
+                    />
+                    <p className="text-xs text-muted-foreground">Mínimo: 1, Máximo: 100</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Máx. promoções/mês (Plano Mensal/Anual)</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={promotionLimits.monthly_annual_max_promotions}
+                      onChange={(e) => setPromotionLimits({
+                        ...promotionLimits,
+                        monthly_annual_max_promotions: Math.min(100, Math.max(1, parseInt(e.target.value) || 1))
+                      })}
+                    />
+                    <p className="text-xs text-muted-foreground">Mínimo: 1, Máximo: 100</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                <h3 className="font-semibold text-lg">Jogadores</h3>
+                <div className="p-3 bg-accent/50 rounded-lg">
+                  <p className="text-sm">
+                    <strong>Ranking:</strong> A quantidade de jogadores armazenados e listados no ranking é igual à 
+                    <strong> quantidade de prêmios da promoção + 10</strong>.
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Este valor é calculado automaticamente com base na quantidade de prêmios de cada promoção.
+                  </p>
+                </div>
+              </div>
+
+              <Button 
+                onClick={handleSaveConfig} 
+                disabled={savingConfig}
+                className="w-full"
+                size="lg"
+              >
+                {savingConfig ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Salvando...
+                  </>
+                ) : 'Salvar Configurações'}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         {activeSection === 'users' && (
             <Card>

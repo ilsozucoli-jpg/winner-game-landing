@@ -20,6 +20,7 @@ export default function Ranking() {
   const { selectedSponsor, resetGame } = useGame();
   const [rankings, setRankings] = useState<RankingEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [rankingLimit, setRankingLimit] = useState(10);
 
   useEffect(() => {
     if (!selectedSponsor) {
@@ -34,12 +35,16 @@ export default function Ranking() {
     if (!selectedSponsor) return;
 
     try {
+      // Calcular limite baseado na quantidade de prêmios + 10
+      const limit = (selectedSponsor.prize_count || 0) + 10;
+      setRankingLimit(limit);
+
       const { data, error } = await supabase
         .from('game_results')
         .select('id, player_name, points, completed_at')
         .eq('sponsor_id', selectedSponsor.id)
         .order('points', { ascending: false })
-        .limit(10);
+        .limit(limit);
 
       if (error) throw error;
       setRankings(data || []);
@@ -68,9 +73,12 @@ export default function Ranking() {
         <SponsorBanner />
 
         <div className="bg-card border border-border rounded-lg p-6 space-y-4">
-          <h2 className="text-2xl font-bold text-foreground mb-6 text-center">
-            Top 10 Jogadores
+          <h2 className="text-2xl font-bold text-foreground mb-2 text-center">
+            Top {rankingLimit} Jogadores
           </h2>
+          <p className="text-sm text-muted-foreground text-center mb-6">
+            ({selectedSponsor?.prize_count || 0} prêmios + 10 posições)
+          </p>
 
           {loading ? (
             <div className="text-center text-muted-foreground py-8">

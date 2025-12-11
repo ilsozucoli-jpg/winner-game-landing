@@ -255,9 +255,11 @@ export default function AdminPanel() {
     
     setUpdatingSponsor(true);
     try {
+      // Atualiza a promoção pendente com os dados do patrocinador, incluindo user_id
       const { error } = await supabase
         .from('pending_promotions')
         .update({
+          user_id: sponsorRegistration.user_id, // IMPORTANTE: Associa a promoção ao patrocinador
           sponsor_registration_id: sponsorRegistration.id,
           name: sponsorRegistration.company,
           phone: sponsorRegistration.phone,
@@ -270,7 +272,7 @@ export default function AdminPanel() {
 
       toast({
         title: "Sucesso!",
-        description: "Patrocinador associado com sucesso.",
+        description: "Patrocinador associado com sucesso. A promoção aparecerá no dashboard do patrocinador após aprovação.",
       });
 
       setSponsorSearchDialogOpen(false);

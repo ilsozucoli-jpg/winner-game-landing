@@ -158,6 +158,48 @@ export default function CreatePromotion() {
         throw new Error('Sessão não encontrada');
       }
 
+      // Verificar limite de promoções por mês para patrocinadores (não admins)
+      if (!isAdmin && sponsorData) {
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
+
+        // Contar promoções aprovadas no mês
+        const { count: sponsorsCount } = await supabase
+          .from('sponsors')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', session.user.id)
+          .gte('created_at', startOfMonth)
+          .lte('created_at', endOfMonth);
+
+        // Contar promoções pendentes no mês
+        const { count: pendingCount } = await supabase
+          .from('pending_promotions')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', session.user.id)
+          .gte('created_at', startOfMonth)
+          .lte('created_at', endOfMonth);
+
+        const totalPromotions = (sponsorsCount || 0) + (pendingCount || 0);
+
+        // Verificar o plano do patrocinador
+        const planName = sponsorData.plan?.toLowerCase() || '';
+        const isBasicPlan = planName.includes('teste') || planName.includes('test') || planName.includes('básico') || planName.includes('basico');
+        const maxPromotions = isBasicPlan ? 3 : 10;
+
+        if (totalPromotions >= maxPromotions) {
+          toast({
+            title: "Limite de promoções atingido",
+            description: isBasicPlan 
+              ? `O plano básico/teste permite no máximo ${maxPromotions} promoções por mês. Você já possui ${totalPromotions}.`
+              : `O limite máximo é de ${maxPromotions} promoções por mês. Você já possui ${totalPromotions}.`,
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
+      }
+
       let logoUrl = null;
 
       // Upload logo if provided

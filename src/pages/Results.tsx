@@ -29,13 +29,15 @@ export default function Results() {
     if (!userData || !selectedSponsor) return;
 
     try {
-      // Buscar top 10 para verificar se o jogador está classificado
+      // Limite = quantidade de prêmios + 10
+      const rankingLimit = (selectedSponsor.prize_count || 0) + 10;
+      
       const { data: topResults, error } = await supabase
         .from('game_results')
         .select('player_name, points')
         .eq('sponsor_id', selectedSponsor.id)
         .order('points', { ascending: false })
-        .limit(10);
+        .limit(rankingLimit);
 
       if (error) throw error;
 
@@ -43,7 +45,8 @@ export default function Results() {
         const position = topResults.findIndex(r => r.player_name === userData.name);
         if (position !== -1) {
           setRankingPosition(position + 1);
-          setIsClassified(true);
+          // Classificado se estiver dentro do número de prêmios
+          setIsClassified(position < (selectedSponsor.prize_count || 0));
         } else {
           setIsClassified(false);
         }

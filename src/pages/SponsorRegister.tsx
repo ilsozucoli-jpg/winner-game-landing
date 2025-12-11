@@ -24,6 +24,7 @@ export default function SponsorRegister() {
   const [uploading, setUploading] = useState(false);
   const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
   const [paymentProofPreview, setPaymentProofPreview] = useState<string>('');
+  const [promotionLimits, setPromotionLimits] = useState<any>(null);
   const renewalData = location.state?.renewalData;
   const isRenewal = !!renewalData;
   
@@ -39,6 +40,26 @@ export default function SponsorRegister() {
     password: '',
     confirmPassword: '',
   });
+
+  useEffect(() => {
+    loadPromotionLimits();
+  }, []);
+
+  const loadPromotionLimits = async () => {
+    try {
+      const { data } = await supabase
+        .from('system_settings')
+        .select('setting_value')
+        .eq('setting_key', 'promotion_limits')
+        .single();
+
+      if (data?.setting_value) {
+        setPromotionLimits(data.setting_value);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar limites:', error);
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -381,7 +402,29 @@ export default function SponsorRegister() {
                   className={isRenewal && renewalData?.state ? "bg-yellow-100 dark:bg-yellow-900/30" : "bg-background"}
                   required
                 />
-              </div>
+            </div>
+
+            {promotionLimits && (
+              <Alert className="bg-blue-50 dark:bg-blue-950/30 border-blue-200">
+                <AlertDescription className="text-sm">
+                  <strong>Limites do plano selecionado:</strong>
+                  <ul className="mt-2 space-y-1 list-disc list-inside">
+                    {formData.plan === 'test' ? (
+                      <>
+                        <li>Até <strong>{promotionLimits.basic_test_max_prizes}</strong> prêmios por promoção</li>
+                        <li>Até <strong>{promotionLimits.basic_test_max_promotions}</strong> promoções por mês</li>
+                      </>
+                    ) : (
+                      <>
+                        <li>Até <strong>{promotionLimits.monthly_annual_max_prizes}</strong> prêmios por promoção</li>
+                        <li>Até <strong>{promotionLimits.monthly_annual_max_promotions}</strong> promoções por mês</li>
+                      </>
+                    )}
+                    <li>Jogadores no ranking: <strong>quantidade de prêmios + 10</strong></li>
+                  </ul>
+                </AlertDescription>
+              </Alert>
+            )}
             </div>
 
             <div className="space-y-4">

@@ -19,6 +19,7 @@ export default function CreatePromotion() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [sponsorData, setSponsorData] = useState<any>(null);
   const [promotionsEnabled, setPromotionsEnabled] = useState(true);
+  const [promotionLimits, setPromotionLimits] = useState<any>(null);
   const [formData, setFormData] = useState({
     company_name: '',
     phone: '',
@@ -44,16 +45,22 @@ export default function CreatePromotion() {
         return;
       }
 
-      // Verificar se cadastros de promoções estão habilitados
+      // Carregar configurações do sistema
       const { data: settingsData } = await supabase
         .from('system_settings')
-        .select('setting_value')
-        .eq('setting_key', 'promotions_registration_enabled')
-        .single();
+        .select('setting_value, setting_key')
+        .in('setting_key', ['promotions_registration_enabled', 'promotion_limits']);
 
-      const settingValue = settingsData?.setting_value as { enabled: boolean } | null;
+      const enabledSetting = settingsData?.find(s => s.setting_key === 'promotions_registration_enabled');
+      const limitsSetting = settingsData?.find(s => s.setting_key === 'promotion_limits');
+
+      const settingValue = enabledSetting?.setting_value as { enabled: boolean } | null;
       const enabled = settingValue?.enabled ?? true;
       setPromotionsEnabled(enabled);
+
+      if (limitsSetting?.setting_value) {
+        setPromotionLimits(limitsSetting.setting_value);
+      }
 
       // Verificar se é admin
       const { data: roleData } = await supabase
@@ -185,7 +192,9 @@ export default function CreatePromotion() {
         // Verificar o plano do patrocinador
         const planName = sponsorData.plan?.toLowerCase() || '';
         const isBasicPlan = planName.includes('teste') || planName.includes('test') || planName.includes('básico') || planName.includes('basico');
-        const maxPromotions = isBasicPlan ? 3 : 10;
+        const maxPromotions = isBasicPlan 
+          ? (promotionLimits?.basic_test_max_promotions ?? 3) 
+          : (promotionLimits?.monthly_annual_max_promotions ?? 10);
 
         if (totalPromotions >= maxPromotions) {
           toast({
@@ -344,6 +353,32 @@ export default function CreatePromotion() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {/* Informativo sobre limites */}
+            {promotionLimits && !isAdmin && sponsorData && (
+              <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 rounded-lg">
+                <p className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
+                  Limites do seu plano ({sponsorData.plan}):
+                </p>
+                <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1 list-disc list-inside">
+                  {(() => {
+                    const planName = sponsorData.plan?.toLowerCase() || '';
+                    const isBasicPlan = planName.includes('teste') || planName.includes('test') || planName.includes('básico') || planName.includes('basico');
+                    return isBasicPlan ? (
+                      <>
+                        <li>Até <strong>{promotionLimits.basic_test_max_prizes}</strong> prêmios por promoção</li>
+                        <li>Até <strong>{promotionLimits.basic_test_max_promotions}</strong> promoções por mês</li>
+                      </>
+                    ) : (
+                      <>
+                        <li>Até <strong>{promotionLimits.monthly_annual_max_prizes}</strong> prêmios por promoção</li>
+                        <li>Até <strong>{promotionLimits.monthly_annual_max_promotions}</strong> promoções por mês</li>
+                      </>
+                    );
+                  })()}
+                  <li>Jogadores no ranking: <strong>quantidade de prêmios + 10</strong></li>
+                </ul>
+              </div>
+            )}
             <form onSubmit={handleSubmit} className="space-y-6">
               {isAdmin ? (
                 <>
@@ -438,22 +473,48 @@ export default function CreatePromotion() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="prize_count">Quantidade de Prêmios * (máximo 10)</Label>
+                <Label htmlFor="prize_count">
+                  Quantidade de Prêmios * 
+                  {promotionLimits && !isAdmin && sponsorData && (
+                    <span className="text-muted-foreground font-normal ml-1">
+                      (máximo {(() => {
+                        const planName = sponsorData.plan?.toLowerCase() || '';
+                        const isBasicPlan = planName.includes('teste') || planName.includes('test') || planName.includes('básico') || planName.includes('basico');
+                        return isBasicPlan ? promotionLimits.basic_test_max_prizes : promotionLimits.monthly_annual_max_prizes;
+                      })()})
+                    </span>
+                  )}
+                  {isAdmin && <span className="text-muted-foreground font-normal ml-1">(máximo 100)</span>}
+                </Label>
                 <Input
                   id="prize_count"
                   type="number"
                   min="1"
-                  max="10"
+                  max={(() => {
+                    if (isAdmin) return 100;
+                    if (!sponsorData || !promotionLimits) return 10;
+                    const planName = sponsorData.plan?.toLowerCase() || '';
+                    const isBasicPlan = planName.includes('teste') || planName.includes('test') || planName.includes('básico') || planName.includes('basico');
+                    return isBasicPlan ? promotionLimits.basic_test_max_prizes : promotionLimits.monthly_annual_max_prizes;
+                  })()}
                   value={formData.prize_count}
                   onChange={(e) => {
                     const value = parseInt(e.target.value);
-                    if (value > 10) {
+                    const maxPrizes = (() => {
+                      if (isAdmin) return 100;
+                      if (!sponsorData || !promotionLimits) return 10;
+                      const planName = sponsorData.plan?.toLowerCase() || '';
+                      const isBasicPlan = planName.includes('teste') || planName.includes('test') || planName.includes('básico') || planName.includes('basico');
+                      return isBasicPlan ? promotionLimits.basic_test_max_prizes : promotionLimits.monthly_annual_max_prizes;
+                    })();
+                    
+                    if (value > maxPrizes) {
                       toast({
                         title: "Limite excedido",
-                        description: "O número máximo para cada promoção são 10.",
+                        description: `O número máximo para cada promoção são ${maxPrizes}.`,
                         variant: "destructive",
                       });
-                      setFormData({ ...formData, prize_count: 10 });
+                      setFormData({ ...formData, prize_count: maxPrizes });
                     } else {
                       setFormData({ ...formData, prize_count: value });
                     }

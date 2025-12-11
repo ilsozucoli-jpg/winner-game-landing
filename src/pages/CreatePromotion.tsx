@@ -191,26 +191,44 @@ export default function CreatePromotion() {
         state: formData.state || null,
       };
 
-      // Todas as promoções vão para pending_promotions com status 'pending'
-      const pendingData = {
-        ...insertData,
-        status: 'pending'
-      };
+      if (isAdmin) {
+        // Admin insere diretamente na tabela sponsors (definitiva)
+        const { error } = await supabase
+          .from('sponsors')
+          .insert(insertData);
 
-      const { error } = await supabase
-        .from('pending_promotions')
-        .insert(pendingData);
+        if (error) {
+          throw new Error(error.message || 'Erro ao cadastrar promoção');
+        }
 
-      if (error) {
-        throw new Error(error.message || 'Erro ao cadastrar promoção');
+        toast({
+          title: "Promoção cadastrada!",
+          description: "A promoção foi cadastrada com sucesso.",
+        });
+
+        navigate('/admin-panel');
+      } else {
+        // Patrocinador insere na tabela pending_promotions para validação
+        const pendingData = {
+          ...insertData,
+          status: 'pending'
+        };
+
+        const { error } = await supabase
+          .from('pending_promotions')
+          .insert(pendingData);
+
+        if (error) {
+          throw new Error(error.message || 'Erro ao cadastrar promoção');
+        }
+
+        toast({
+          title: "Promoção enviada!",
+          description: "Sua promoção foi enviada para aprovação do administrador.",
+        });
+
+        navigate('/sponsor-dashboard');
       }
-
-      toast({
-        title: "Promoção enviada!",
-        description: "Sua promoção foi enviada para aprovação do administrador.",
-      });
-
-      navigate(getBackRoute());
     } catch (error: any) {
       toast({
         title: "Erro",

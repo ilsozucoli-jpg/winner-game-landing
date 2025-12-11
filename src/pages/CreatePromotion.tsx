@@ -396,15 +396,26 @@ export default function CreatePromotion() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="prize_count">Quantidade de Prêmios *</Label>
+                <Label htmlFor="prize_count">Quantidade de Prêmios * (máximo 10)</Label>
                 <Input
                   id="prize_count"
                   type="number"
                   min="1"
+                  max="10"
                   value={formData.prize_count}
-                  onChange={(e) =>
-                    setFormData({ ...formData, prize_count: parseInt(e.target.value) })
-                  }
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value);
+                    if (value > 10) {
+                      toast({
+                        title: "Limite excedido",
+                        description: "O número máximo para cada promoção são 10.",
+                        variant: "destructive",
+                      });
+                      setFormData({ ...formData, prize_count: 10 });
+                    } else {
+                      setFormData({ ...formData, prize_count: value });
+                    }
+                  }}
                   required
                 />
               </div>

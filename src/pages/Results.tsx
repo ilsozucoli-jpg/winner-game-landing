@@ -2,8 +2,8 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { SponsorBanner } from '@/components/SponsorBanner';
 import { useGame } from '@/contexts/GameContext';
-import { Trophy, Star, Award, Medal } from 'lucide-react';
-import { useEffect } from 'react';
+import { Trophy, Star, Award, Medal, AlertCircle } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useGameMusic } from '@/hooks/useGameMusic';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -11,6 +11,8 @@ import { toast } from '@/hooks/use-toast';
 export default function Results() {
   const navigate = useNavigate();
   const { userData, totalPoints, stagePoints, wheelPoints, resetGame, selectedSponsor } = useGame();
+  const [rankingPosition, setRankingPosition] = useState<number | null>(null);
+  const [isClassified, setIsClassified] = useState<boolean | null>(null);
   
   useGameMusic();
 
@@ -22,6 +24,34 @@ export default function Results() {
     
     saveGameResult();
   }, [userData, navigate]);
+
+  const checkRankingPosition = async () => {
+    if (!userData || !selectedSponsor) return;
+
+    try {
+      // Buscar top 10 para verificar se o jogador está classificado
+      const { data: topResults, error } = await supabase
+        .from('game_results')
+        .select('player_name, points')
+        .eq('sponsor_id', selectedSponsor.id)
+        .order('points', { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+
+      if (topResults) {
+        const position = topResults.findIndex(r => r.player_name === userData.name);
+        if (position !== -1) {
+          setRankingPosition(position + 1);
+          setIsClassified(true);
+        } else {
+          setIsClassified(false);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking ranking position:', error);
+    }
+  };
 
   const saveGameResult = async () => {
     if (!userData || !selectedSponsor) return;
@@ -81,6 +111,9 @@ export default function Results() {
           description: "Sua pontuação foi registrada no ranking.",
         });
       }
+
+      // Verificar posição no ranking após salvar
+      await checkRankingPosition();
     } catch (error) {
       console.error('Error saving game result:', error);
     }
@@ -107,6 +140,37 @@ export default function Results() {
           </div>
           <p className="text-primary-foreground/80">pontos conquistados</p>
         </div>
+
+        {/* Mensagem de classificação */}
+        {isClassified !== null && (
+          <div className={`rounded-lg p-6 text-center space-y-2 ${
+            isClassified 
+              ? 'bg-green-100 dark:bg-green-900/30 border-2 border-green-500' 
+              : 'bg-amber-100 dark:bg-amber-900/30 border-2 border-amber-500'
+          }`}>
+            {isClassified ? (
+              <>
+                <Trophy className="w-12 h-12 text-green-600 dark:text-green-400 mx-auto" />
+                <h3 className="text-xl font-bold text-green-700 dark:text-green-300">
+                  Parabéns! Você está classificado!
+                </h3>
+                <p className="text-green-600 dark:text-green-400">
+                  Você está na {rankingPosition}ª posição do ranking!
+                </p>
+              </>
+            ) : (
+              <>
+                <AlertCircle className="w-12 h-12 text-amber-600 dark:text-amber-400 mx-auto" />
+                <h3 className="text-xl font-bold text-amber-700 dark:text-amber-300">
+                  Bom jogo, mas você ainda não atingiu a classificação, tente novamente!
+                </h3>
+                <p className="text-amber-600 dark:text-amber-400 font-semibold">
+                  Boa sorte!
+                </p>
+              </>
+            )}
+          </div>
+        )}
 
         <div className="bg-card border border-border rounded-lg p-6 space-y-4">
           <h3 className="text-xl font-bold text-foreground flex items-center gap-2">

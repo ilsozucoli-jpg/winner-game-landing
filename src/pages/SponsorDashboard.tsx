@@ -5,7 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Store, Phone, Mail, MapPin, Calendar, Trophy, AlertCircle, Plus } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Loader2, Phone, Mail, MapPin, Calendar, Trophy, AlertCircle, Plus, Image, Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface Promotion {
@@ -16,6 +18,17 @@ interface Promotion {
   promotion_end_date: string;
   phone: string;
   logo_url: string;
+  city?: string;
+  state?: string;
+  created_at?: string;
+}
+
+interface RankingPlayer {
+  player_name: string;
+  player_email: string;
+  player_phone: string;
+  points: number;
+  completed_at: string;
 }
 
 export default function SponsorDashboard() {
@@ -25,6 +38,9 @@ export default function SponsorDashboard() {
   const [sponsorData, setSponsorData] = useState<any>(null);
   const [activePromotions, setActivePromotions] = useState<Promotion[]>([]);
   const [expiredPromotions, setExpiredPromotions] = useState<Promotion[]>([]);
+  const [selectedPromotion, setSelectedPromotion] = useState<Promotion | null>(null);
+  const [rankingPlayers, setRankingPlayers] = useState<RankingPlayer[]>([]);
+  const [loadingRanking, setLoadingRanking] = useState(false);
 
   useEffect(() => {
     loadSponsorData();
@@ -162,11 +178,46 @@ export default function SponsorDashboard() {
     return new Date(sponsorData.validity_date) < new Date();
   };
 
+  const handlePromotionClick = async (promotion: Promotion) => {
+    setSelectedPromotion(promotion);
+    setLoadingRanking(true);
+    try {
+      const rankingLimit = promotion.prize_count + 10;
+      const { data, error } = await supabase
+        .from('game_results')
+        .select('player_name, player_email, player_phone, points, completed_at')
+        .eq('sponsor_id', promotion.id)
+        .order('points', { ascending: false })
+        .limit(rankingLimit);
+
+      if (error) throw error;
+
+      // Filter to keep only highest score per player
+      const uniquePlayers = new Map<string, RankingPlayer>();
+      data?.forEach(player => {
+        const existing = uniquePlayers.get(player.player_email);
+        if (!existing || player.points > existing.points) {
+          uniquePlayers.set(player.player_email, player);
+        }
+      });
+
+      setRankingPlayers(Array.from(uniquePlayers.values()).sort((a, b) => b.points - a.points));
+    } catch (error) {
+      console.error('Error loading ranking:', error);
+    } finally {
+      setLoadingRanking(false);
+    }
+  };
+
+  const isPromotionExpired = (endDate: string) => {
+    return new Date(endDate) < new Date();
+  };
+
   const renderPromotionCard = (promotion: Promotion) => (
     <Card 
       key={promotion.id} 
       className="cursor-pointer hover:shadow-lg transition-shadow"
-      onClick={() => navigate(`/ranking?sponsor_id=${promotion.id}`)}
+      onClick={() => handlePromotionClick(promotion)}
     >
       <CardHeader>
         <div className="flex justify-between items-start">
@@ -376,6 +427,129 @@ export default function SponsorDashboard() {
             </CardContent>
           </Card>
         )}
+
+        {/* Promotion Detail Modal */}
+        <Dialog open={!!selectedPromotion} onOpenChange={(open) => !open && setSelectedPromotion(null)}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden">
+            <DialogHeader>
+              <DialogTitle className="text-xl flex items-center gap-2">
+                <Trophy className="h-5 w-5 text-primary" />
+                {selectedPromotion?.name || 'Detalhes da Promoção'}
+              </DialogTitle>
+            </DialogHeader>
+            
+            {selectedPromotion && (
+              <ScrollArea className="max-h-[70vh] pr-4">
+                <div className="space-y-6">
+                  {/* Promotion Details */}
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-4">
+                      {selectedPromotion.logo_url && (
+                        <img 
+                          src={selectedPromotion.logo_url} 
+                          alt="Logo" 
+                          className="w-20 h-20 object-contain rounded-lg border"
+                        />
+                      )}
+                      <div className="flex-1 space-y-2">
+                        <Badge variant={isPromotionExpired(selectedPromotion.promotion_end_date) ? "destructive" : "default"}>
+                          {isPromotionExpired(selectedPromotion.promotion_end_date) ? "Vencida" : "Ativa"}
+                        </Badge>
+                        <p className="text-sm text-muted-foreground">
+                          {selectedPromotion.city && selectedPromotion.state 
+                            ? `${selectedPromotion.city} - ${selectedPromotion.state}` 
+                            : ''}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <Trophy className="h-4 w-4 text-primary" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">Prêmio</p>
+                          <p className="text-sm font-medium">{selectedPromotion.prize_description}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Users className="h-4 w-4 text-primary" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">Quantidade de Prêmios</p>
+                          <p className="text-sm font-medium">{selectedPromotion.prize_count}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-primary" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">Contato</p>
+                          <p className="text-sm font-medium">{selectedPromotion.phone}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-primary" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">Término</p>
+                          <p className="text-sm font-medium">{formatDateTime(selectedPromotion.promotion_end_date)}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Ranking Section */}
+                  <div className="space-y-3">
+                    <h3 className="font-semibold flex items-center gap-2">
+                      <Trophy className="h-4 w-4" />
+                      Ranking de Jogadores
+                    </h3>
+                    
+                    {loadingRanking ? (
+                      <div className="flex justify-center py-4">
+                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                      </div>
+                    ) : rankingPlayers.length === 0 ? (
+                      <p className="text-center text-muted-foreground py-4">
+                        Nenhum jogador participou desta promoção ainda.
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {rankingPlayers.map((player, index) => {
+                          const isWinner = index < selectedPromotion.prize_count;
+                          return (
+                            <div 
+                              key={`${player.player_email}-${index}`}
+                              className={`flex items-center gap-3 p-3 rounded-lg border ${
+                                isWinner ? 'bg-primary/10 border-primary/30' : 'bg-muted/30'
+                              }`}
+                            >
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                                index === 0 ? 'bg-yellow-500 text-white' :
+                                index === 1 ? 'bg-gray-400 text-white' :
+                                index === 2 ? 'bg-orange-600 text-white' :
+                                'bg-muted text-muted-foreground'
+                              }`}>
+                                {index + 1}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium truncate">{player.player_name}</p>
+                                <p className="text-xs text-muted-foreground truncate">{player.player_phone}</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-bold text-primary">{player.points} pts</p>
+                                {isWinner && (
+                                  <Badge variant="default" className="text-xs">Premiado</Badge>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </ScrollArea>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

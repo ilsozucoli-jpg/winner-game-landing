@@ -82,26 +82,35 @@ export default function CreatePromotion() {
         });
       }
 
-      // Se não for admin, buscar dados do patrocinador
+      // Se não for admin, buscar dados do patrocinador aprovado
       if (!userIsAdmin) {
         const { data: sponsorReg } = await supabase
           .from('sponsor_registrations')
           .select('*')
           .eq('user_id', session.user.id)
+          .eq('status', 'approved')
           .maybeSingle();
+
+        if (!sponsorReg) {
+          toast({
+            title: "Acesso negado",
+            description: "Apenas patrocinadores aprovados podem criar promoções.",
+            variant: "destructive",
+          });
+          navigate('/sponsor-dashboard');
+          return;
+        }
 
         setSponsorData(sponsorReg);
         
         // Preencher dados do formulário com os dados do patrocinador
-        if (sponsorReg) {
-          setFormData(prev => ({
-            ...prev,
-            company_name: sponsorReg.company || '',
-            phone: sponsorReg.phone || '',
-            city: sponsorReg.city || '',
-            state: sponsorReg.state || '',
-          }));
-        }
+        setFormData(prev => ({
+          ...prev,
+          company_name: sponsorReg.company || '',
+          phone: sponsorReg.phone || '',
+          city: sponsorReg.city || '',
+          state: sponsorReg.state || '',
+        }));
       }
     } catch (error: any) {
       toast({

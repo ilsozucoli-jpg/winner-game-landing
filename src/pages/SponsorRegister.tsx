@@ -25,6 +25,7 @@ export default function SponsorRegister() {
   const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
   const [paymentProofPreview, setPaymentProofPreview] = useState<string>('');
   const [promotionLimits, setPromotionLimits] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const renewalData = location.state?.renewalData;
   const isRenewal = !!renewalData;
   
@@ -40,8 +41,35 @@ export default function SponsorRegister() {
   });
 
   useEffect(() => {
-    loadPromotionLimits();
+    checkAuthAndLoadData();
   }, []);
+
+  const checkAuthAndLoadData = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        navigate('/auth');
+        return;
+      }
+
+      setUser(session.user);
+      
+      // Pré-preencher email do usuário logado (se não for renovação)
+      if (!isRenewal) {
+        setFormData(prev => ({
+          ...prev,
+          email: session.user.email || ''
+        }));
+      }
+
+      await loadPromotionLimits();
+      setLoading(false);
+    } catch (error) {
+      console.error('Erro ao verificar autenticação:', error);
+      navigate('/auth');
+    }
+  };
 
   const loadPromotionLimits = async () => {
     try {
@@ -153,49 +181,20 @@ export default function SponsorRegister() {
         
         navigate('/sponsor-dashboard');
       } else {
-        // Fluxo de novo cadastro - criar usuário com senha padrão temporária
-        const tempPassword = `Temp${Date.now()}!`;
-        const { data: authData, error: signUpError } = await supabase.auth.signUp({
-          email: formData.email,
-          password: tempPassword,
-          options: {
-            emailRedirectTo: `${window.location.origin}/`,
-          }
-        });
-
-        if (signUpError) throw signUpError;
-        
-        if (!authData.user) {
-          throw new Error('Erro ao criar usuário');
-        }
-
-        // Verificar se usuário já é jogador (tem name preenchido no perfil)
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('name')
-          .eq('id', authData.user.id)
-          .maybeSingle();
-
-        if (profile?.name) {
-          toast({
-            title: "Usuário já cadastrado como jogador",
-            description: "Este usuário já possui cadastro como jogador.",
-            variant: "destructive",
-          });
-          await supabase.auth.signOut();
-          setUploading(false);
-          return;
+        // Fluxo de novo cadastro - usar usuário já logado
+        if (!user) {
+          throw new Error('Usuário não autenticado');
         }
 
         // Upload do comprovante
-        const paymentProofUrl = await uploadPaymentProof(authData.user.id);
+        const paymentProofUrl = await uploadPaymentProof(user.id);
         const selectedPlan = PLAN_OPTIONS.find(p => p.value === formData.plan);
         
         // Inserir registro de patrocinador
         const { error } = await supabase
           .from('sponsor_registrations')
           .insert({
-            user_id: authData.user.id,
+            user_id: user.id,
             name: formData.name,
             address: formData.address,
             city: formData.city,
@@ -213,11 +212,12 @@ export default function SponsorRegister() {
 
         toast({
           title: "Cadastro realizado!",
-          description: "Usuário criado e cadastro de patrocinador enviado para análise.",
+          description: "Cadastro de patrocinador enviado para análise.",
           className: "bg-success text-success-foreground",
         });
         
-        navigate('/auth');
+        // Redirecionar para dashboard do patrocinador
+        navigate('/sponsor-dashboard');
       }
     } catch (error: any) {
       toast({
@@ -232,12 +232,20 @@ export default function SponsorRegister() {
 
   const selectedPlan = PLAN_OPTIONS.find(p => p.value === formData.plan);
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-2xl mx-auto space-y-6 animate-slide-up">
         <Button
           variant="ghost"
-          onClick={() => navigate(isRenewal ? '/sponsor-dashboard' : '/register')}
+          onClick={() => navigate(isRenewal ? '/sponsor-dashboard' : '/role-selection')}
           className="mb-4"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
@@ -302,9 +310,9 @@ export default function SponsorRegister() {
                   type="email"
                   placeholder="seu@email.com"
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className={isRenewal && renewalData?.email ? "bg-yellow-100 dark:bg-yellow-900/30" : "bg-background"}
-                  required
+                  readOnly
+                  disabled
+                  className="bg-yellow-100 dark:bg-yellow-900/30 cursor-not-allowed"
                 />
               </div>
             </div>

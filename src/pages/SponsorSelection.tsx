@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Building2, MapPin, Award, Loader2, Clock } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Building2, MapPin, Award, Loader2, Clock, Search, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useGame } from '@/contexts/GameContext';
 import { format } from 'date-fns';
@@ -20,6 +21,8 @@ interface Sponsor {
   promotion_end_date?: string | null;
 }
 
+const ITEMS_PER_PAGE = 10;
+
 export default function SponsorSelection() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -27,6 +30,8 @@ export default function SponsorSelection() {
   const [sponsors, setSponsors] = useState<Sponsor[]>([]);
   const [loading, setLoading] = useState(true);
   const [selecting, setSelecting] = useState(false);
+  const [cityFilter, setCityFilter] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     checkAuthAndLoadSponsors();
@@ -121,6 +126,26 @@ export default function SponsorSelection() {
     }
   };
 
+  // Filtrar por cidade
+  const filteredSponsors = useMemo(() => {
+    if (!cityFilter.trim()) return sponsors;
+    return sponsors.filter(s => 
+      s.city.toLowerCase().includes(cityFilter.toLowerCase().trim())
+    );
+  }, [sponsors, cityFilter]);
+
+  // Paginação
+  const totalPages = Math.ceil(filteredSponsors.length / ITEMS_PER_PAGE);
+  const paginatedSponsors = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredSponsors.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredSponsors, currentPage]);
+
+  // Reset página ao filtrar
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [cityFilter]);
+
   const handleSelectSponsor = async (sponsor: Sponsor) => {
     setSelecting(true);
     
@@ -153,6 +178,13 @@ export default function SponsorSelection() {
   const isSponsorExpired = (sponsor: Sponsor) => {
     if (!sponsor.promotion_end_date) return false;
     return new Date(sponsor.promotion_end_date) <= new Date();
+  };
+
+  const handleContinue = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(prev => prev + 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   if (loading) {
@@ -206,76 +238,153 @@ export default function SponsorSelection() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {sponsors.map((sponsor) => {
-            const isExpired = isSponsorExpired(sponsor);
-            return (
-              <Card 
-                key={sponsor.id}
-                className={`hover:shadow-lg transition-shadow group ${isExpired ? 'opacity-60' : ''}`}
+        {/* Filtro por cidade */}
+        <div className="max-w-md mx-auto">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Filtrar por cidade (opcional)"
+              value={cityFilter}
+              onChange={(e) => setCityFilter(e.target.value)}
+              className="pl-10 pr-10"
+            />
+            {cityFilter && (
+              <button
+                onClick={() => setCityFilter('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
-                <CardHeader>
-                  <div className="w-full h-32 bg-muted rounded-lg flex items-center justify-center overflow-hidden mb-4">
-                    <img 
-                      src={sponsor.logo_url} 
-                      alt={sponsor.name}
-                      className="w-full h-full object-contain group-hover:scale-105 transition-transform"
-                    />
-                  </div>
-                  <CardTitle className="text-xl">{sponsor.name}</CardTitle>
-                  {isExpired && (
-                    <p className="text-sm text-destructive font-medium">Promoção Encerrada</p>
-                  )}
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <MapPin className="w-4 h-4 text-primary" />
-                    <span>{sponsor.city}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Award className="w-4 h-4 text-primary" />
-                    <span>{sponsor.prize_count} {sponsor.prize_count === 1 ? 'prêmio' : 'prêmios'}</span>
-                  </div>
-                  {sponsor.promotion_end_date && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Clock className="w-4 h-4 text-primary" />
-                      <span>Até {format(new Date(sponsor.promotion_end_date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
-                    </div>
-                  )}
-                  <div className="pt-2 border-t border-border">
-                    <p className="text-sm text-foreground font-medium">
-                      {sponsor.prize_description}
-                    </p>
-                  </div>
-                  <div className="space-y-2 mt-4">
-                    <Button
-                      variant="game"
-                      className="w-full"
-                      disabled={selecting || isExpired}
-                      onClick={() => handleSelectSponsor(sponsor)}
-                    >
-                      {selecting ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Selecionando...
-                        </>
-                      ) : (
-                        'Selecionar'
-                      )}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => handleViewRanking(sponsor)}
-                    >
-                      Ver Ranking
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+          {cityFilter && (
+            <p className="text-sm text-muted-foreground mt-2 text-center">
+              {filteredSponsors.length} {filteredSponsors.length === 1 ? 'promoção encontrada' : 'promoções encontradas'}
+            </p>
+          )}
         </div>
+
+        {filteredSponsors.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">Nenhuma promoção encontrada para esta cidade.</p>
+            <Button
+              variant="outline"
+              onClick={() => setCityFilter('')}
+              className="mt-4"
+            >
+              Limpar filtro
+            </Button>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {paginatedSponsors.map((sponsor) => {
+                const isExpired = isSponsorExpired(sponsor);
+                return (
+                  <Card 
+                    key={sponsor.id}
+                    className={`hover:shadow-lg transition-shadow group ${isExpired ? 'opacity-60' : ''}`}
+                  >
+                    <CardHeader>
+                      <div className="w-full h-32 bg-muted rounded-lg flex items-center justify-center overflow-hidden mb-4">
+                        <img 
+                          src={sponsor.logo_url} 
+                          alt={sponsor.name}
+                          className="w-full h-full object-contain group-hover:scale-105 transition-transform"
+                        />
+                      </div>
+                      <CardTitle className="text-xl">{sponsor.name}</CardTitle>
+                      {isExpired && (
+                        <p className="text-sm text-destructive font-medium">Promoção Encerrada</p>
+                      )}
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <MapPin className="w-4 h-4 text-primary" />
+                        <span>{sponsor.city}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Award className="w-4 h-4 text-primary" />
+                        <span>{sponsor.prize_count} {sponsor.prize_count === 1 ? 'prêmio' : 'prêmios'}</span>
+                      </div>
+                      {sponsor.promotion_end_date && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Clock className="w-4 h-4 text-primary" />
+                          <span>Até {format(new Date(sponsor.promotion_end_date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
+                        </div>
+                      )}
+                      <div className="pt-2 border-t border-border">
+                        <p className="text-sm text-foreground font-medium">
+                          {sponsor.prize_description}
+                        </p>
+                      </div>
+                      <div className="space-y-2 mt-4">
+                        <Button
+                          variant="game"
+                          className="w-full"
+                          disabled={selecting || isExpired}
+                          onClick={() => handleSelectSponsor(sponsor)}
+                        >
+                          {selecting ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Selecionando...
+                            </>
+                          ) : (
+                            'Selecionar'
+                          )}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="w-full"
+                          onClick={() => handleViewRanking(sponsor)}
+                        >
+                          Ver Ranking
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+
+            {/* Paginação e botão continuar */}
+            <div className="flex flex-col items-center gap-4 pt-4">
+              <p className="text-sm text-muted-foreground">
+                Mostrando {((currentPage - 1) * ITEMS_PER_PAGE) + 1} - {Math.min(currentPage * ITEMS_PER_PAGE, filteredSponsors.length)} de {filteredSponsors.length} promoções
+              </p>
+              
+              {currentPage < totalPages && (
+                <Button
+                  variant="game"
+                  size="lg"
+                  onClick={handleContinue}
+                  className="px-8"
+                >
+                  Continuar
+                </Button>
+              )}
+
+              {totalPages > 1 && (
+                <div className="flex gap-2">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <Button
+                      key={page}
+                      variant={page === currentPage ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => {
+                        setCurrentPage(page);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                    >
+                      {page}
+                    </Button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

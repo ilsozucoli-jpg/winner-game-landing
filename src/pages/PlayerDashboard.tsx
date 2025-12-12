@@ -531,17 +531,30 @@ export default function PlayerDashboard() {
                     </div>
 
                     {/* Instruções */}
-                    <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-                      <h4 className="font-bold text-foreground flex items-center gap-2">
-                        <AlertTriangle className="w-4 h-4 text-accent" />
+                    <div className="bg-yellow-400 rounded-lg p-4 space-y-2">
+                      <h4 className="font-bold text-black flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4 text-black" />
                         Instruções para Retirada
                       </h4>
-                      <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                      <ul className="text-sm text-black space-y-1 list-disc list-inside">
                         <li>Validade de <strong>1 mês</strong> para retirar o prêmio</li>
                         <li>Retirar o prêmio <strong>somente no local da promoção</strong></li>
                         <li>Exibir este certificado para retirar o prêmio</li>
                         <li>Entre em contato com o patrocinador pelo telefone acima</li>
                       </ul>
+                    </div>
+
+                    {/* Logo animado de parabéns */}
+                    <div className="flex flex-col items-center justify-center py-4">
+                      <div className="text-6xl animate-bounce">🎉</div>
+                      <p className="text-2xl font-black text-accent mt-2 animate-pulse">
+                        PARABÉNS!
+                      </p>
+                      <div className="flex gap-2 mt-2">
+                        <span className="text-3xl animate-bounce" style={{ animationDelay: '0.1s' }}>🏆</span>
+                        <span className="text-3xl animate-bounce" style={{ animationDelay: '0.2s' }}>⭐</span>
+                        <span className="text-3xl animate-bounce" style={{ animationDelay: '0.3s' }}>🎊</span>
+                      </div>
                     </div>
                   </>
                 )}

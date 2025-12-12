@@ -37,8 +37,6 @@ export default function SponsorRegister() {
     plan: 'monthly',
     phone: renewalData?.phone || '',
     email: renewalData?.email || '',
-    password: '',
-    confirmPassword: '',
   });
 
   useEffect(() => {
@@ -97,28 +95,10 @@ export default function SponsorRegister() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.address || !formData.city || !formData.state || !formData.company || !formData.phone || !formData.email || !formData.password || !formData.confirmPassword) {
+    if (!formData.name || !formData.address || !formData.city || !formData.state || !formData.company || !formData.phone || !formData.email) {
       toast({
         title: "Campos obrigatórios",
         description: "Por favor, preencha todos os campos.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      toast({
-        title: "Senhas não conferem",
-        description: "As senhas digitadas devem ser iguais.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (formData.password.length < 6) {
-      toast({
-        title: "Senha muito curta",
-        description: "A senha deve ter no mínimo 6 caracteres.",
         variant: "destructive",
       });
       return;
@@ -143,13 +123,6 @@ export default function SponsorRegister() {
         if (!user) {
           throw new Error('Usuário não autenticado');
         }
-
-        // Atualizar senha
-        const { error: passwordError } = await supabase.auth.updateUser({
-          password: formData.password
-        });
-
-        if (passwordError) throw passwordError;
 
         // Upload do novo comprovante
         const paymentProofUrl = await uploadPaymentProof(user.id);
@@ -180,10 +153,11 @@ export default function SponsorRegister() {
         
         navigate('/sponsor-dashboard');
       } else {
-        // Fluxo de novo cadastro
+        // Fluxo de novo cadastro - criar usuário com senha padrão temporária
+        const tempPassword = `Temp${Date.now()}!`;
         const { data: authData, error: signUpError } = await supabase.auth.signUp({
           email: formData.email,
-          password: formData.password,
+          password: tempPassword,
           options: {
             emailRedirectTo: `${window.location.origin}/`,
           }
@@ -335,33 +309,6 @@ export default function SponsorRegister() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="password">Senha *</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Mínimo 6 caracteres"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="bg-background"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirmar Senha *</Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  placeholder="Digite a senha novamente"
-                  value={formData.confirmPassword}
-                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                  className="bg-background"
-                  required
-                />
-              </div>
-            </div>
 
             <div className="space-y-2">
               <Label htmlFor="address">Endereço *</Label>

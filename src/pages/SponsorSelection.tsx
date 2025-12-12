@@ -26,7 +26,7 @@ const ITEMS_PER_PAGE = 10;
 export default function SponsorSelection() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { setSelectedSponsor } = useGame();
+  const { setSelectedSponsor, resetGame } = useGame();
   const [sponsors, setSponsors] = useState<Sponsor[]>([]);
   const [loading, setLoading] = useState(true);
   const [selecting, setSelecting] = useState(false);
@@ -34,6 +34,7 @@ export default function SponsorSelection() {
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
+    resetGame(); // Zerar pontos ao entrar na tela
     checkAuthAndLoadSponsors();
   }, []);
 

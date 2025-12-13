@@ -7,48 +7,67 @@ interface ArcheryGameProps {
   timeLimit: number;
 }
 
-interface TargetPosition {
+interface TargetData {
+  id: number;
   x: number;
   y: number;
   vx: number;
   vy: number;
+  hit: boolean;
+}
+
+function generateRandomSequence(): number[] {
+  const sequence = [1, 2, 3, 4, 5];
+  for (let i = sequence.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [sequence[i], sequence[j]] = [sequence[j], sequence[i]];
+  }
+  return sequence;
+}
+
+function generateInitialTargets(): TargetData[] {
+  return [1, 2, 3, 4, 5].map((id) => ({
+    id,
+    x: 15 + (id - 1) * 17,
+    y: 20 + Math.random() * 50,
+    vx: (Math.random() - 0.5) * 2,
+    vy: (Math.random() - 0.5) * 2,
+    hit: false,
+  }));
 }
 
 export function ArcheryGame({ onComplete, timeLimit }: ArcheryGameProps) {
-  const [targetPosition, setTargetPosition] = useState<TargetPosition>({
-    x: 50,
-    y: 50,
-    vx: 2,
-    vy: 1.5,
-  });
-  const [hits, setHits] = useState(0);
+  const [targets, setTargets] = useState<TargetData[]>(generateInitialTargets);
+  const [sequence, setSequence] = useState<number[]>(generateRandomSequence);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [timeLeft, setTimeLeft] = useState(timeLimit);
   const [gameOver, setGameOver] = useState(false);
   const [message, setMessage] = useState('');
-  const [archerPosition, setArcherPosition] = useState(10);
 
-  // Movimento do alvo
+  // Movimento dos alvos
   useEffect(() => {
     if (gameOver) return;
 
     const interval = setInterval(() => {
-      setTargetPosition(prev => {
-        let newX = prev.x + prev.vx;
-        let newY = prev.y + prev.vy;
-        let newVx = prev.vx;
-        let newVy = prev.vy;
+      setTargets(prev => prev.map(target => {
+        if (target.hit) return target;
 
-        if (newX <= 10 || newX >= 85) {
-          newVx = -prev.vx;
-          newX = Math.max(10, Math.min(85, newX));
+        let newX = target.x + target.vx;
+        let newY = target.y + target.vy;
+        let newVx = target.vx;
+        let newVy = target.vy;
+
+        if (newX <= 5 || newX >= 85) {
+          newVx = -target.vx;
+          newX = Math.max(5, Math.min(85, newX));
         }
-        if (newY <= 10 || newY >= 80) {
-          newVy = -prev.vy;
-          newY = Math.max(10, Math.min(80, newY));
+        if (newY <= 10 || newY >= 75) {
+          newVy = -target.vy;
+          newY = Math.max(10, Math.min(75, newY));
         }
 
-        return { x: newX, y: newY, vx: newVx, vy: newVy };
-      });
+        return { ...target, x: newX, y: newY, vx: newVx, vy: newVy };
+      }));
     }, 50);
 
     return () => clearInterval(interval);
@@ -56,7 +75,7 @@ export function ArcheryGame({ onComplete, timeLimit }: ArcheryGameProps) {
 
   // Timer
   useEffect(() => {
-    if (gameOver || hits >= 5) return;
+    if (gameOver) return;
 
     const timer = setInterval(() => {
       setTimeLeft(prev => {
@@ -71,73 +90,74 @@ export function ArcheryGame({ onComplete, timeLimit }: ArcheryGameProps) {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [gameOver, hits, onComplete]);
+  }, [gameOver, onComplete]);
 
   // Verificar vitória
   useEffect(() => {
-    if (hits >= 5 && !gameOver) {
+    if (currentIndex >= 5 && !gameOver) {
       setGameOver(true);
-      setMessage('🎯 Parabéns! Você acertou todos os alvos!');
+      setMessage('🎯 Parabéns! Você acertou toda a sequência!');
       setTimeout(onComplete, 2000);
     }
-  }, [hits, gameOver, onComplete]);
+  }, [currentIndex, gameOver, onComplete]);
 
-  // Atualizar posição do arqueiro com base no mouse/touch
-  useEffect(() => {
-    const handleMove = (clientY: number, containerRect: DOMRect) => {
-      const relativeY = ((clientY - containerRect.top) / containerRect.height) * 100;
-      setArcherPosition(Math.max(5, Math.min(95, relativeY)));
-    };
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const container = document.getElementById('archery-game-container');
-      if (container) {
-        handleMove(e.clientY, container.getBoundingClientRect());
-      }
-    };
-
-    const handleTouchMove = (e: TouchEvent) => {
-      const container = document.getElementById('archery-game-container');
-      if (container && e.touches[0]) {
-        handleMove(e.touches[0].clientY, container.getBoundingClientRect());
-      }
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('touchmove', handleTouchMove);
-
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('touchmove', handleTouchMove);
-    };
+  const resetGame = useCallback(() => {
+    setTargets(generateInitialTargets());
+    setSequence(generateRandomSequence());
+    setCurrentIndex(0);
+    setMessage('');
   }, []);
 
-  const handleShoot = useCallback(() => {
+  const handleTargetClick = useCallback((targetId: number) => {
     if (gameOver) return;
 
-    // Verificar se o arqueiro está alinhado com o alvo (margem de erro de 10%)
-    const archerY = archerPosition;
-    const targetY = targetPosition.y;
-    const tolerance = 8;
+    const expectedId = sequence[currentIndex];
 
-    if (Math.abs(archerY - targetY) < tolerance) {
-      setHits(prev => prev + 1);
+    if (targetId === expectedId) {
+      setTargets(prev => prev.map(t => 
+        t.id === targetId ? { ...t, hit: true } : t
+      ));
+      setCurrentIndex(prev => prev + 1);
       setMessage('🎯 Acertou!');
       setTimeout(() => setMessage(''), 800);
     } else {
-      setMessage('❌ Errou!');
-      setTimeout(() => setMessage(''), 800);
+      setMessage('❌ Sequência errada! Reiniciando...');
+      setTimeout(() => {
+        resetGame();
+      }, 1500);
     }
-  }, [gameOver, archerPosition, targetPosition.y]);
+  }, [gameOver, sequence, currentIndex, resetGame]);
 
   return (
     <div className="bg-card border border-border rounded-lg p-6 space-y-4">
       <div className="text-center space-y-2">
-        <h2 className="text-2xl font-bold text-foreground">Tiro ao Alvo!</h2>
+        <h2 className="text-2xl font-bold text-foreground">Acerte a Sequência!</h2>
+        
+        {/* Sequência a seguir */}
+        <div className="bg-primary/10 rounded-lg p-3">
+          <p className="text-sm text-muted-foreground mb-2">Acerte os alvos nesta ordem:</p>
+          <div className="flex justify-center gap-3">
+            {sequence.map((num, idx) => (
+              <div 
+                key={idx}
+                className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg border-2 transition-all ${
+                  idx < currentIndex 
+                    ? 'bg-green-500 border-green-600 text-white' 
+                    : idx === currentIndex 
+                      ? 'bg-primary border-primary text-primary-foreground animate-pulse' 
+                      : 'bg-muted border-border text-muted-foreground'
+                }`}
+              >
+                {num}
+              </div>
+            ))}
+          </div>
+        </div>
+
         <div className="flex items-center justify-center gap-4">
           <div className="bg-primary/20 text-primary px-4 py-2 rounded-lg">
             <span className="text-sm font-medium">Acertos: </span>
-            <span className="text-2xl font-bold">{hits}/5</span>
+            <span className="text-2xl font-bold">{currentIndex}/5</span>
           </div>
           <div className="bg-destructive/20 text-destructive px-4 py-2 rounded-lg">
             <span className="text-sm font-medium">Tempo: </span>
@@ -150,43 +170,48 @@ export function ArcheryGame({ onComplete, timeLimit }: ArcheryGameProps) {
       </div>
 
       <div 
-        id="archery-game-container"
-        className="relative bg-gradient-to-r from-primary/5 to-accent/5 border-2 border-primary/20 rounded-lg overflow-hidden" 
-        style={{ height: '400px' }}
-        onClick={handleShoot}
+        className="relative bg-gradient-to-b from-muted/30 to-muted/10 border-2 border-border rounded-lg overflow-hidden" 
+        style={{ height: '350px' }}
       >
-        {/* Arqueiro */}
-        <div 
-          className="absolute left-4 w-12 h-12 transition-all duration-100"
-          style={{ 
-            top: `${archerPosition}%`,
-            transform: 'translateY(-50%)'
-          }}
-        >
-          <div className="text-4xl">🏹</div>
-        </div>
-
-        {/* Alvo móvel */}
-        <Button
-          variant="ghost"
-          size="icon"
-          disabled={gameOver}
-          className="absolute transition-none cursor-default"
-          style={{
-            left: `${targetPosition.x}%`,
-            top: `${targetPosition.y}%`,
-            transform: 'translate(-50%, -50%)',
-          }}
-        >
-          <Target 
-            className="w-12 h-12 text-destructive"
-            fill="currentColor"
-          />
-        </Button>
+        {/* Alvos móveis */}
+        {targets.map(target => (
+          <button
+            key={target.id}
+            onClick={() => handleTargetClick(target.id)}
+            disabled={gameOver || target.hit}
+            className={`absolute transition-none w-16 h-16 rounded-full flex items-center justify-center cursor-pointer hover:scale-110 active:scale-95 ${
+              target.hit 
+                ? 'pointer-events-none' 
+                : 'hover:shadow-lg'
+            }`}
+            style={{
+              left: `${target.x}%`,
+              top: `${target.y}%`,
+              transform: 'translate(-50%, -50%)',
+            }}
+          >
+            {/* Círculos do alvo */}
+            <div className={`absolute w-16 h-16 rounded-full border-4 ${
+              target.hit ? 'border-green-500 bg-green-100' : 'border-gray-400 bg-white'
+            }`} />
+            <div className={`absolute w-11 h-11 rounded-full border-3 ${
+              target.hit ? 'border-green-400 bg-green-200' : 'border-gray-300 bg-gray-100'
+            }`} />
+            <div className={`absolute w-6 h-6 rounded-full ${
+              target.hit ? 'bg-green-500' : 'bg-gray-400'
+            }`} />
+            {/* Número do alvo */}
+            <span className={`relative z-10 font-bold text-lg ${
+              target.hit ? 'text-white' : 'text-white'
+            }`}>
+              {target.id}
+            </span>
+          </button>
+        ))}
       </div>
 
       <p className="text-sm text-muted-foreground text-center">
-        Mova o mouse para posicionar o arqueiro e clique para atirar!
+        Clique nos alvos na ordem correta da sequência mostrada acima!
       </p>
     </div>
   );

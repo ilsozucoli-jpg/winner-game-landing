@@ -66,6 +66,9 @@ export default function AdminPanel() {
   const [searchingSponsors, setSearchingSponsors] = useState(false);
   const [selectedPromotionForSponsor, setSelectedPromotionForSponsor] = useState<any | null>(null);
   const [updatingSponsor, setUpdatingSponsor] = useState(false);
+  const [registrationsStatusFilter, setRegistrationsStatusFilter] = useState<'all' | 'approved' | 'pending' | 'rejected'>('all');
+  const [registrationsCityFilter, setRegistrationsCityFilter] = useState('');
+  const [registrationsCurrentPage, setRegistrationsCurrentPage] = useState(1);
 
   useEffect(() => {
     checkAdminStatus();
@@ -1625,59 +1628,163 @@ export default function AdminPanel() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
+                <div className="space-y-4 mb-4">
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant={registrationsStatusFilter === 'all' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => {
+                        setRegistrationsStatusFilter('all');
+                        setRegistrationsCurrentPage(1);
+                      }}
+                    >
+                      Todos
+                    </Button>
+                    <Button
+                      variant={registrationsStatusFilter === 'approved' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => {
+                        setRegistrationsStatusFilter('approved');
+                        setRegistrationsCurrentPage(1);
+                      }}
+                      className={registrationsStatusFilter === 'approved' ? 'bg-green-500 hover:bg-green-600' : ''}
+                    >
+                      Aprovados
+                    </Button>
+                    <Button
+                      variant={registrationsStatusFilter === 'pending' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => {
+                        setRegistrationsStatusFilter('pending');
+                        setRegistrationsCurrentPage(1);
+                      }}
+                      className={registrationsStatusFilter === 'pending' ? 'bg-yellow-500 hover:bg-yellow-600' : ''}
+                    >
+                      Pendentes
+                    </Button>
+                    <Button
+                      variant={registrationsStatusFilter === 'rejected' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => {
+                        setRegistrationsStatusFilter('rejected');
+                        setRegistrationsCurrentPage(1);
+                      }}
+                      className={registrationsStatusFilter === 'rejected' ? 'bg-red-500 hover:bg-red-600' : ''}
+                    >
+                      Rejeitados
+                    </Button>
+                  </div>
+                  <Input
+                    type="text"
+                    value={registrationsCityFilter}
+                    onChange={(e) => {
+                      setRegistrationsCityFilter(e.target.value);
+                      setRegistrationsCurrentPage(1);
+                    }}
+                    placeholder="Filtrar por cidade..."
+                    className="max-w-sm"
+                  />
+                </div>
                 {loadingSponsorRegistrations ? (
                   <div className="flex justify-center p-8">
                     <Loader2 className="h-8 w-8 animate-spin" />
                   </div>
                 ) : sponsorRegistrations.length === 0 ? (
                   <p className="text-center text-muted-foreground p-8">Nenhum cadastro encontrado</p>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Nome</TableHead>
-                          <TableHead>Endereço</TableHead>
-                          <TableHead>Cidade</TableHead>
-                          <TableHead>UF</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Ações</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {sponsorRegistrations.map((registration: any) => (
-                          <TableRow key={registration.id}>
-                            <TableCell className="font-medium">{registration.name}</TableCell>
-                            <TableCell>{registration.address}</TableCell>
-                            <TableCell>{registration.city}</TableCell>
-                            <TableCell>{registration.state}</TableCell>
-                            <TableCell>
-                              <span className={`px-2 py-1 text-xs rounded ${
-                                registration.status === 'approved' 
-                                  ? 'bg-green-500/10 text-green-500'
-                                  : registration.status === 'rejected'
-                                  ? 'bg-red-500/10 text-red-500'
-                                  : 'bg-yellow-500/10 text-yellow-500'
-                              }`}>
-                                {registration.status === 'approved' ? 'Aprovado' : 
-                                 registration.status === 'rejected' ? 'Rejeitado' : 'Pendente'}
-                              </span>
-                            </TableCell>
-                            <TableCell>
+                ) : (() => {
+                  const filteredRegistrations = sponsorRegistrations.filter(registration => {
+                    const matchesStatus = registrationsStatusFilter === 'all' || registration.status === registrationsStatusFilter;
+                    const matchesCity = !registrationsCityFilter || 
+                      (registration.city && registration.city.toLowerCase().includes(registrationsCityFilter.toLowerCase()));
+                    return matchesStatus && matchesCity;
+                  });
+                  const registrationsPerPage = 20;
+                  const totalPages = Math.ceil(filteredRegistrations.length / registrationsPerPage);
+                  const startIndex = (registrationsCurrentPage - 1) * registrationsPerPage;
+                  const paginatedRegistrations = filteredRegistrations.slice(startIndex, startIndex + registrationsPerPage);
+
+                  return (
+                    <div className="space-y-4">
+                      {filteredRegistrations.length === 0 ? (
+                        <p className="text-center text-muted-foreground p-8">Nenhum cadastro encontrado com os filtros aplicados</p>
+                      ) : (
+                        <>
+                          <p className="text-sm text-muted-foreground">
+                            Exibindo {startIndex + 1}-{Math.min(startIndex + registrationsPerPage, filteredRegistrations.length)} de {filteredRegistrations.length} cadastro(s)
+                          </p>
+                          <div className="overflow-x-auto">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Nome</TableHead>
+                                  <TableHead>Endereço</TableHead>
+                                  <TableHead>Cidade</TableHead>
+                                  <TableHead>UF</TableHead>
+                                  <TableHead>Status</TableHead>
+                                  <TableHead>Ações</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {paginatedRegistrations.map((registration: any) => (
+                                  <TableRow key={registration.id}>
+                                    <TableCell className="font-medium">{registration.name}</TableCell>
+                                    <TableCell>{registration.address}</TableCell>
+                                    <TableCell>{registration.city}</TableCell>
+                                    <TableCell>{registration.state}</TableCell>
+                                    <TableCell>
+                                      <span className={`px-2 py-1 text-xs rounded ${
+                                        registration.status === 'approved' 
+                                          ? 'bg-green-500/10 text-green-500'
+                                          : registration.status === 'rejected'
+                                          ? 'bg-red-500/10 text-red-500'
+                                          : 'bg-yellow-500/10 text-yellow-500'
+                                      }`}>
+                                        {registration.status === 'approved' ? 'Aprovado' : 
+                                         registration.status === 'rejected' ? 'Rejeitado' : 'Pendente'}
+                                      </span>
+                                    </TableCell>
+                                    <TableCell>
+                                      <Button
+                                        variant="secondary"
+                                        size="sm"
+                                        onClick={() => setSelectedRegistration(registration)}
+                                      >
+                                        Ver Detalhes
+                                      </Button>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                          {totalPages > 1 && (
+                            <div className="flex justify-center items-center gap-2 pt-4">
                               <Button
-                                variant="secondary"
+                                variant="outline"
                                 size="sm"
-                                onClick={() => setSelectedRegistration(registration)}
+                                onClick={() => setRegistrationsCurrentPage(p => Math.max(1, p - 1))}
+                                disabled={registrationsCurrentPage === 1}
                               >
-                                Ver Detalhes
+                                Anterior
                               </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
+                              <span className="text-sm text-muted-foreground">
+                                Página {registrationsCurrentPage} de {totalPages}
+                              </span>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setRegistrationsCurrentPage(p => Math.min(totalPages, p + 1))}
+                                disabled={registrationsCurrentPage === totalPages}
+                              >
+                                Próxima
+                              </Button>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  );
+                })()}
               </CardContent>
             </Card>
 

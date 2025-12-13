@@ -37,6 +37,9 @@ export default function AdminPanel() {
   const [sponsors, setSponsors] = useState<any[]>([]);
   const [loadingSponsors, setLoadingSponsors] = useState(false);
   const [deletingSponsor, setDeletingSponsor] = useState(false);
+  const [sponsorsStatusFilter, setSponsorsStatusFilter] = useState<'all' | 'active' | 'expired'>('all');
+  const [sponsorsSearchFilter, setSponsorsSearchFilter] = useState('');
+  const [sponsorsCurrentPage, setSponsorsCurrentPage] = useState(1);
   const [sponsorRegistrations, setSponsorRegistrations] = useState<any[]>([]);
   const [loadingSponsorRegistrations, setLoadingSponsorRegistrations] = useState(false);
   const [selectedRegistration, setSelectedRegistration] = useState<any | null>(null);
@@ -1444,63 +1447,173 @@ export default function AdminPanel() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
+                <div className="space-y-4 mb-4">
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant={sponsorsStatusFilter === 'all' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => {
+                        setSponsorsStatusFilter('all');
+                        setSponsorsCurrentPage(1);
+                      }}
+                    >
+                      Todas
+                    </Button>
+                    <Button
+                      variant={sponsorsStatusFilter === 'active' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => {
+                        setSponsorsStatusFilter('active');
+                        setSponsorsCurrentPage(1);
+                      }}
+                      className={sponsorsStatusFilter === 'active' ? 'bg-green-500 hover:bg-green-600' : ''}
+                    >
+                      Ativas
+                    </Button>
+                    <Button
+                      variant={sponsorsStatusFilter === 'expired' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => {
+                        setSponsorsStatusFilter('expired');
+                        setSponsorsCurrentPage(1);
+                      }}
+                      className={sponsorsStatusFilter === 'expired' ? 'bg-red-500 hover:bg-red-600' : ''}
+                    >
+                      Vencidas
+                    </Button>
+                  </div>
+                  <Input
+                    type="text"
+                    value={sponsorsSearchFilter}
+                    onChange={(e) => {
+                      setSponsorsSearchFilter(e.target.value);
+                      setSponsorsCurrentPage(1);
+                    }}
+                    placeholder="Filtrar por cidade ou patrocinador..."
+                    className="max-w-sm"
+                  />
+                </div>
                 {loadingSponsors ? (
                   <div className="flex justify-center p-8">
                     <Loader2 className="h-8 w-8 animate-spin" />
                   </div>
                 ) : sponsors.length === 0 ? (
                   <p className="text-center text-muted-foreground p-8">Nenhuma promoção cadastrada</p>
-                ) : (
-                  <div className="space-y-4">
-                    {sponsors.map((sponsor: any) => (
-                      <div key={sponsor.id} className="border border-border rounded-lg p-4">
-                        <div className="flex items-start gap-4">
-                          <div className="w-20 h-20 bg-muted rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
-                            <img 
-                              src={sponsor.logo_url} 
-                              alt="Logo do Patrocinador" 
-                              className="w-full h-full object-contain"
-                            />
-                          </div>
-                          <div className="flex-1">
-                            <p className="font-bold text-lg text-foreground">{sponsor.name || 'Nome não cadastrado'}</p>
-                            <p className="text-sm text-muted-foreground mt-1">Cidade: {sponsor.city || 'Não informada'}</p>
-                            <p className="text-sm text-muted-foreground">Prêmios: {sponsor.prize_count || 1}</p>
-                            <p className="font-medium text-foreground mt-2">Prêmio: {sponsor.prize_description}</p>
-                            <p className="text-sm text-muted-foreground mt-1">Telefone: {sponsor.phone}</p>
-                            {sponsor.promotion_end_date && (
-                              <p className="text-sm text-muted-foreground mt-1">
-                                Vencimento: {new Date(sponsor.promotion_end_date).toLocaleString('pt-BR')}
-                              </p>
-                            )}
-                            <p className="text-sm font-semibold text-primary mt-1">
-                              Total de jogadores: {sponsor.player_count || 0}
-                            </p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Cadastrado em: {new Date(sponsor.created_at).toLocaleDateString('pt-BR')}
-                            </p>
-                          </div>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleDeleteSponsor(sponsor.id)}
-                            disabled={deletingSponsor}
-                          >
-                            {deletingSponsor ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <Trash2 className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )
-              }
-            </CardContent>
-          </Card>
-      )}
+                ) : (() => {
+                  const now = new Date();
+                  const filteredSponsors = sponsors.filter((sponsor) => {
+                    // Filter by status
+                    const isExpired = sponsor.promotion_end_date && new Date(sponsor.promotion_end_date) < now;
+                    if (sponsorsStatusFilter === 'active' && isExpired) return false;
+                    if (sponsorsStatusFilter === 'expired' && !isExpired) return false;
+                    
+                    // Filter by search (city or name)
+                    if (sponsorsSearchFilter) {
+                      const searchLower = sponsorsSearchFilter.toLowerCase();
+                      const matchesCity = sponsor.city && sponsor.city.toLowerCase().includes(searchLower);
+                      const matchesName = sponsor.name && sponsor.name.toLowerCase().includes(searchLower);
+                      if (!matchesCity && !matchesName) return false;
+                    }
+                    
+                    return true;
+                  });
+                  
+                  const sponsorsPerPage = 10;
+                  const totalPages = Math.ceil(filteredSponsors.length / sponsorsPerPage);
+                  const startIndex = (sponsorsCurrentPage - 1) * sponsorsPerPage;
+                  const paginatedSponsors = filteredSponsors.slice(startIndex, startIndex + sponsorsPerPage);
+                  
+                  return (
+                    <div className="space-y-4">
+                      {filteredSponsors.length === 0 ? (
+                        <p className="text-center text-muted-foreground p-8">Nenhuma promoção encontrada com os filtros aplicados</p>
+                      ) : (
+                        <>
+                          <p className="text-sm text-muted-foreground">
+                            Exibindo {startIndex + 1}-{Math.min(startIndex + sponsorsPerPage, filteredSponsors.length)} de {filteredSponsors.length} promoção(ões)
+                          </p>
+                          {paginatedSponsors.map((sponsor: any) => {
+                            const isExpired = sponsor.promotion_end_date && new Date(sponsor.promotion_end_date) < now;
+                            return (
+                              <div key={sponsor.id} className={`border rounded-lg p-4 ${isExpired ? 'border-red-500/50 bg-red-500/5' : 'border-border'}`}>
+                                <div className="flex items-start gap-4">
+                                  <div className="w-20 h-20 bg-muted rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+                                    <img 
+                                      src={sponsor.logo_url} 
+                                      alt="Logo do Patrocinador" 
+                                      className="w-full h-full object-contain"
+                                    />
+                                  </div>
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <p className="font-bold text-lg text-foreground">{sponsor.name || 'Nome não cadastrado'}</p>
+                                      {isExpired && (
+                                        <span className="px-2 py-0.5 text-xs rounded bg-red-500/10 text-red-500">Vencida</span>
+                                      )}
+                                    </div>
+                                    <p className="text-sm text-muted-foreground mt-1">Cidade: {sponsor.city || 'Não informada'}</p>
+                                    <p className="text-sm text-muted-foreground">Prêmios: {sponsor.prize_count || 1}</p>
+                                    <p className="font-medium text-foreground mt-2">Prêmio: {sponsor.prize_description}</p>
+                                    <p className="text-sm text-muted-foreground mt-1">Telefone: {sponsor.phone}</p>
+                                    {sponsor.promotion_end_date && (
+                                      <p className={`text-sm mt-1 ${isExpired ? 'text-red-500' : 'text-muted-foreground'}`}>
+                                        Vencimento: {new Date(sponsor.promotion_end_date).toLocaleString('pt-BR')}
+                                      </p>
+                                    )}
+                                    <p className="text-sm font-semibold text-primary mt-1">
+                                      Total de jogadores: {sponsor.player_count || 0}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      Cadastrado em: {new Date(sponsor.created_at).toLocaleDateString('pt-BR')}
+                                    </p>
+                                  </div>
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => handleDeleteSponsor(sponsor.id)}
+                                    disabled={deletingSponsor}
+                                  >
+                                    {deletingSponsor ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <Trash2 className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                          {totalPages > 1 && (
+                            <div className="flex justify-center items-center gap-2 pt-4">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setSponsorsCurrentPage(p => Math.max(1, p - 1))}
+                                disabled={sponsorsCurrentPage === 1}
+                              >
+                                Anterior
+                              </Button>
+                              <span className="text-sm text-muted-foreground">
+                                Página {sponsorsCurrentPage} de {totalPages}
+                              </span>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setSponsorsCurrentPage(p => Math.min(totalPages, p + 1))}
+                                disabled={sponsorsCurrentPage === totalPages}
+                              >
+                                Próxima
+                              </Button>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+        )}
 
         {activeSection === 'registrations' && (
           <>

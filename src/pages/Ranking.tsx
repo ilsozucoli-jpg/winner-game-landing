@@ -21,11 +21,18 @@ export default function Ranking() {
   const [rankings, setRankings] = useState<RankingEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [rankingLimit, setRankingLimit] = useState(10);
+  const [isExpired, setIsExpired] = useState(false);
 
   useEffect(() => {
     if (!selectedSponsor) {
       navigate('/sponsor-selection');
       return;
+    }
+
+    // Verificar se a promoção está vencida
+    if (selectedSponsor.promotion_end_date) {
+      const endDate = new Date(selectedSponsor.promotion_end_date);
+      setIsExpired(endDate < new Date());
     }
 
     fetchRankings();
@@ -58,6 +65,14 @@ export default function Ranking() {
   const handleGoHome = () => {
     resetGame();
     window.location.href = '/';
+  };
+
+  const handleBack = () => {
+    if (isExpired) {
+      navigate('/sponsor-selection');
+    } else {
+      navigate('/results');
+    }
   };
 
   return (
@@ -159,11 +174,11 @@ export default function Ranking() {
           <Button
             variant="outline"
             size="xl"
-            onClick={() => navigate('/results')}
+            onClick={handleBack}
             className="w-full"
           >
             <ArrowLeft className="w-5 h-5 mr-2" />
-            VOLTAR
+            {isExpired ? 'ESCOLHER PROMOÇÃO' : 'VOLTAR'}
           </Button>
           <Button
             variant="outline"

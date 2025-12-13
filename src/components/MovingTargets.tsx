@@ -113,24 +113,43 @@ export function MovingTargets({ onComplete, timeLimit }: MovingTargetsProps) {
 
       <div className="relative bg-background border-2 border-primary/20 rounded-lg overflow-hidden" style={{ height: '400px' }}>
         {targets.map(target => (
-          <Button
+          <button
             key={target.id}
-            variant="ghost"
-            size="icon"
             disabled={gameOver}
             onClick={() => handleTargetClick(target)}
-            className="absolute transition-none hover:scale-110"
+            className="absolute transition-none hover:scale-110 active:scale-95 cursor-pointer"
             style={{
               left: `${target.x}%`,
               top: `${target.y}%`,
               transform: 'translate(-50%, -50%)',
             }}
           >
-            <Target 
-              className={`w-12 h-12 ${target.isReal ? 'text-success' : 'text-destructive'}`}
-              fill="currentColor"
-            />
-          </Button>
+            {/* Alvo com 6 círculos cinza e 5 brancos alternados */}
+            <div className="relative w-20 h-20 flex items-center justify-center">
+              {/* Círculo 1 - Cinza (externo) */}
+              <div className="absolute w-20 h-20 rounded-full bg-gray-400" />
+              {/* Círculo 2 - Branco */}
+              <div className="absolute w-[72px] h-[72px] rounded-full bg-white" />
+              {/* Círculo 3 - Cinza */}
+              <div className="absolute w-16 h-16 rounded-full bg-gray-400" />
+              {/* Círculo 4 - Branco */}
+              <div className="absolute w-14 h-14 rounded-full bg-white" />
+              {/* Círculo 5 - Cinza */}
+              <div className="absolute w-12 h-12 rounded-full bg-gray-400" />
+              {/* Círculo 6 - Branco */}
+              <div className="absolute w-10 h-10 rounded-full bg-white" />
+              {/* Círculo 7 - Cinza */}
+              <div className="absolute w-8 h-8 rounded-full bg-gray-400" />
+              {/* Círculo 8 - Branco */}
+              <div className="absolute w-6 h-6 rounded-full bg-white" />
+              {/* Círculo 9 - Cinza */}
+              <div className="absolute w-4 h-4 rounded-full bg-gray-400" />
+              {/* Círculo 10 - Branco */}
+              <div className="absolute w-2 h-2 rounded-full bg-white" />
+              {/* Círculo 11 - Cinza (centro) */}
+              <div className="absolute w-1 h-1 rounded-full bg-gray-400" />
+            </div>
+          </button>
         ))}
       </div>
 

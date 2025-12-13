@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { SponsorBanner } from '@/components/SponsorBanner';
 import { PointsDisplay } from '@/components/PointsDisplay';
 import { WheelOfFortune } from '@/components/WheelOfFortune';
-import { MovingTargets } from '@/components/MovingTargets';
+import { TetrisShooter } from '@/components/TetrisShooter';
 import { ArcheryGame } from '@/components/ArcheryGame';
 import { TicTacToe } from '@/components/TicTacToe';
 import { ColorSequence } from '@/components/ColorSequence';
@@ -154,9 +154,9 @@ export default function GameStage() {
         {showChallenge && !challengeComplete && (
           <>
             {stageNumber === 0 ? (
-              <MovingTargets 
+              <TetrisShooter 
                 onComplete={handleChallengeComplete} 
-                timeLimit={20}
+                timeLimit={45}
               />
             ) : stageNumber === 1 ? (
               <ArcheryGame 

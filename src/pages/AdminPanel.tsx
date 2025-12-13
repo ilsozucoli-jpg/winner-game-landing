@@ -23,7 +23,8 @@ export default function AdminPanel() {
   const [creatingUser, setCreatingUser] = useState(false);
   const [users, setUsers] = useState<any[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
-  const [deletingUsers, setDeletingUsers] = useState(false);
+  const [userListSearchQuery, setUserListSearchQuery] = useState('');
+  const [userListCurrentPage, setUserListCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
@@ -558,48 +559,6 @@ export default function AdminPanel() {
     }
   };
 
-  const handleDeleteAllUsers = async () => {
-    if (!confirm('Tem certeza que deseja deletar TODOS os usuários? Esta ação não pode ser desfeita!')) {
-      return;
-    }
-
-    setDeletingUsers(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Não autenticado');
-
-      // Delete all user roles
-      const { error: rolesError } = await supabase
-        .from('user_roles')
-        .delete()
-        .neq('user_id', session.user.id); // Keep current admin
-
-      if (rolesError) throw rolesError;
-
-      // Delete all profiles except current user
-      const { error: profilesError } = await supabase
-        .from('profiles')
-        .delete()
-        .neq('id', session.user.id);
-
-      if (profilesError) throw profilesError;
-
-      toast({
-        title: "Sucesso!",
-        description: "Todos os usuários foram deletados (exceto você).",
-      });
-
-      loadUsers(); // Reload users list
-    } catch (error: any) {
-      toast({
-        title: "Erro",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setDeletingUsers(false);
-    }
-  };
 
   const handleSearchUser = async () => {
     if (!searchQuery.trim()) {
@@ -1379,21 +1338,16 @@ export default function AdminPanel() {
               </CardHeader>
               <CardContent>
                 <div className="mb-4">
-                  <Button 
-                    onClick={handleDeleteAllUsers} 
-                    disabled={deletingUsers || users.length === 0}
-                    variant="destructive"
-                    size="sm"
-                  >
-                    {deletingUsers ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Deletando...
-                      </>
-                    ) : (
-                      'Deletar Todos os Usuários'
-                    )}
-                  </Button>
+                  <Input
+                    type="text"
+                    value={userListSearchQuery}
+                    onChange={(e) => {
+                      setUserListSearchQuery(e.target.value);
+                      setUserListCurrentPage(1);
+                    }}
+                    placeholder="Filtrar por nome..."
+                    className="max-w-sm"
+                  />
                 </div>
                 {loadingUsers ? (
                   <div className="flex justify-center p-8">
@@ -1401,39 +1355,82 @@ export default function AdminPanel() {
                   </div>
                 ) : users.length === 0 ? (
                   <p className="text-center text-muted-foreground p-8">Nenhum usuário encontrado</p>
-                ) : (
-                  <div className="space-y-4">
-                    {users.map((user) => (
-                      <div key={user.id} className="border border-border rounded-lg p-4">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <p className="font-medium">{user.email || 'Email não cadastrado'}</p>
-                            {user.name && <p className="text-sm text-muted-foreground">{user.name}</p>}
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Cadastrado em: {new Date(user.created_at).toLocaleDateString('pt-BR')}
-                            </p>
-                          </div>
-                          <div className="flex gap-2">
-                            {user.roles.length > 0 ? (
-                              user.roles.map((role: string) => (
-                                <span 
-                                  key={role}
-                                  className="px-2 py-1 bg-primary/10 text-primary text-xs rounded"
-                                >
-                                  {role}
-                                </span>
-                              ))
-                            ) : (
-                              <span className="px-2 py-1 bg-muted text-muted-foreground text-xs rounded">
-                                user
+                ) : (() => {
+                  const filteredUsers = users.filter(user => 
+                    !userListSearchQuery || 
+                    (user.name && user.name.toLowerCase().includes(userListSearchQuery.toLowerCase()))
+                  );
+                  const usersPerPage = 10;
+                  const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+                  const startIndex = (userListCurrentPage - 1) * usersPerPage;
+                  const paginatedUsers = filteredUsers.slice(startIndex, startIndex + usersPerPage);
+
+                  return (
+                    <div className="space-y-4">
+                      {filteredUsers.length === 0 ? (
+                        <p className="text-center text-muted-foreground p-8">Nenhum usuário encontrado com esse nome</p>
+                      ) : (
+                        <>
+                          <p className="text-sm text-muted-foreground">
+                            Exibindo {startIndex + 1}-{Math.min(startIndex + usersPerPage, filteredUsers.length)} de {filteredUsers.length} usuário(s)
+                          </p>
+                          {paginatedUsers.map((user) => (
+                            <div key={user.id} className="border border-border rounded-lg p-4">
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <p className="font-medium">{user.email || 'Email não cadastrado'}</p>
+                                  {user.name && <p className="text-sm text-muted-foreground">{user.name}</p>}
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    Cadastrado em: {new Date(user.created_at).toLocaleDateString('pt-BR')}
+                                  </p>
+                                </div>
+                                <div className="flex gap-2">
+                                  {user.roles.length > 0 ? (
+                                    user.roles.map((role: string) => (
+                                      <span 
+                                        key={role}
+                                        className="px-2 py-1 bg-primary/10 text-primary text-xs rounded"
+                                      >
+                                        {role}
+                                      </span>
+                                    ))
+                                  ) : (
+                                    <span className="px-2 py-1 bg-muted text-muted-foreground text-xs rounded">
+                                      user
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                          {totalPages > 1 && (
+                            <div className="flex justify-center items-center gap-2 pt-4">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setUserListCurrentPage(p => Math.max(1, p - 1))}
+                                disabled={userListCurrentPage === 1}
+                              >
+                                Anterior
+                              </Button>
+                              <span className="text-sm text-muted-foreground">
+                                Página {userListCurrentPage} de {totalPages}
                               </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setUserListCurrentPage(p => Math.min(totalPages, p + 1))}
+                                disabled={userListCurrentPage === totalPages}
+                              >
+                                Próxima
+                              </Button>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  );
+                })()}
               </CardContent>
             </Card>
         )}

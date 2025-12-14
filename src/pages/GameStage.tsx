@@ -11,7 +11,8 @@ import { ColorSequence } from '@/components/ColorSequence';
 import { Minesweeper } from '@/components/Minesweeper';
 import { useGame } from '@/contexts/GameContext';
 import { useToast } from '@/hooks/use-toast';
-import { Timer, Target } from 'lucide-react';
+import { Timer, Target, LogOut } from 'lucide-react';
+import { SettingsMenu } from '@/components/SettingsMenu';
 
 const STAGE_BASE_POINTS = [100, 200, 300, 400, 500];
 
@@ -135,6 +136,9 @@ export default function GameStage() {
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-2xl mx-auto space-y-6">
+        <div className="flex justify-end gap-2">
+          <SettingsMenu />
+        </div>
         <div className="text-center">
           <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-2">
             Winning Game

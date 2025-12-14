@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useGame } from '@/contexts/GameContext';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { SettingsMenu } from '@/components/SettingsMenu';
 
 interface Sponsor {
   id: string;
@@ -230,6 +231,9 @@ export default function SponsorSelection() {
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-6xl mx-auto space-y-8">
+        <div className="flex justify-end">
+          <SettingsMenu />
+        </div>
         <div className="text-center space-y-2">
           <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent">
             Escolha sua promoção

@@ -23,6 +23,20 @@ interface Promotion {
   created_at?: string;
 }
 
+interface PendingPromotion {
+  id: string;
+  name: string | null;
+  prize_description: string;
+  prize_count: number;
+  promotion_end_date: string | null;
+  phone: string;
+  logo_url: string | null;
+  city?: string | null;
+  state?: string | null;
+  status: string;
+  created_at: string;
+}
+
 interface RankingPlayer {
   player_name: string;
   player_email: string;
@@ -38,6 +52,7 @@ export default function SponsorDashboard() {
   const [sponsorData, setSponsorData] = useState<any>(null);
   const [activePromotions, setActivePromotions] = useState<Promotion[]>([]);
   const [expiredPromotions, setExpiredPromotions] = useState<Promotion[]>([]);
+  const [pendingPromotions, setPendingPromotions] = useState<PendingPromotion[]>([]);
   const [selectedPromotion, setSelectedPromotion] = useState<Promotion | null>(null);
   const [rankingPlayers, setRankingPlayers] = useState<RankingPlayer[]>([]);
   const [loadingRanking, setLoadingRanking] = useState(false);
@@ -83,6 +98,7 @@ export default function SponsorDashboard() {
       
       // Load promotions
       await loadPromotions(session.user.id);
+      await loadPendingPromotions(session.user.id);
     } catch (error: any) {
       toast({
         title: "Erro",
@@ -116,6 +132,22 @@ export default function SponsorDashboard() {
       setExpiredPromotions(expired);
     } catch (error) {
       console.error('Error loading promotions:', error);
+    }
+  };
+
+  const loadPendingPromotions = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('pending_promotions')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      setPendingPromotions(data || []);
+    } catch (error) {
+      console.error('Error loading pending promotions:', error);
     }
   };
 
@@ -391,9 +423,12 @@ export default function SponsorDashboard() {
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="active" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
+                <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="active">
                     Ativas ({activePromotions.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="pending">
+                    Pendentes ({pendingPromotions.length})
                   </TabsTrigger>
                   <TabsTrigger value="expired">
                     Vencidas ({expiredPromotions.length})
@@ -408,6 +443,44 @@ export default function SponsorDashboard() {
                   ) : (
                     <div className="grid gap-4 md:grid-cols-2">
                       {activePromotions.map(renderPromotionCard)}
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="pending" className="space-y-4 mt-4">
+                  {pendingPromotions.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">
+                      Nenhuma promoção aguardando aprovação
+                    </p>
+                  ) : (
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {pendingPromotions.map((promotion) => (
+                        <Card key={promotion.id} className="border-yellow-500/50 bg-yellow-50/50 dark:bg-yellow-950/20">
+                          <CardHeader>
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <CardTitle className="text-lg">{promotion.name || 'Promoção'}</CardTitle>
+                                <CardDescription>
+                                  Criada em: {formatDateTime(promotion.created_at)}
+                                </CardDescription>
+                              </div>
+                              <Badge variant="secondary" className="bg-yellow-500 text-white">
+                                Aguardando Aprovação
+                              </Badge>
+                            </div>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="space-y-2">
+                              <p className="text-sm"><strong>Prêmio:</strong> {promotion.prize_description}</p>
+                              <p className="text-sm"><strong>Quantidade:</strong> {promotion.prize_count}</p>
+                              <p className="text-sm"><strong>Contato:</strong> {promotion.phone}</p>
+                              {promotion.promotion_end_date && (
+                                <p className="text-sm"><strong>Término:</strong> {formatDateTime(promotion.promotion_end_date)}</p>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
                     </div>
                   )}
                 </TabsContent>

@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import { useGameMusic } from '@/hooks/useGameMusic';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { SettingsMenu } from '@/components/SettingsMenu';
+import { FixedHeader } from '@/components/FixedHeader';
 
 export default function Results() {
   const navigate = useNavigate();
@@ -125,10 +125,8 @@ export default function Results() {
 
   return (
     <div className="min-h-screen bg-background p-6">
+      <FixedHeader />
       <div className="max-w-2xl mx-auto space-y-6 animate-slide-up">
-        <div className="flex justify-end">
-          <SettingsMenu />
-        </div>
         <div className="text-center space-y-4">
           <Trophy className="w-24 h-24 text-accent mx-auto animate-pulse-glow" />
           <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent">

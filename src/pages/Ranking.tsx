@@ -7,7 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { SponsorBanner } from '@/components/SponsorBanner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { SettingsMenu } from '@/components/SettingsMenu';
+import { FixedHeader } from '@/components/FixedHeader';
 
 interface RankingEntry {
   id: string;
@@ -78,10 +78,8 @@ export default function Ranking() {
 
   return (
     <div className="min-h-screen bg-background p-6">
+      <FixedHeader />
       <div className="max-w-4xl mx-auto space-y-6 animate-slide-up">
-        <div className="flex justify-end">
-          <SettingsMenu />
-        </div>
         <div className="text-center space-y-4">
           <Trophy className="w-20 h-20 text-accent mx-auto animate-pulse-glow" />
           <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent">

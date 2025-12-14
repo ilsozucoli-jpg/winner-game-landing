@@ -9,7 +9,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { format, differenceInDays, addMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { SettingsMenu } from '@/components/SettingsMenu';
+import { FixedHeader } from '@/components/FixedHeader';
 
 interface Participation {
   id: string;
@@ -206,8 +206,9 @@ export default function PlayerDashboard() {
 
   return (
     <div className="min-h-screen bg-background p-6">
+      <FixedHeader />
       <div className="max-w-4xl mx-auto space-y-6 animate-slide-up">
-        <div className="flex justify-between items-center">
+        <div className="flex justify-start">
           <Button
             variant="ghost"
             onClick={() => navigate('/')}
@@ -215,15 +216,6 @@ export default function PlayerDashboard() {
             <ArrowLeft className="w-4 h-4 mr-2" />
             Início
           </Button>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              onClick={handleLogout}
-            >
-              Sair
-            </Button>
-            <SettingsMenu />
-          </div>
         </div>
 
         <div className="text-center space-y-2">

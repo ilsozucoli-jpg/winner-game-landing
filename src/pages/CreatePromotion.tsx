@@ -7,7 +7,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Loader2, Upload } from 'lucide-react';
+import { ArrowLeft, Loader2, Upload, CheckCircle, XCircle, Shield } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+
+interface ValidationResult {
+  approved: boolean;
+  reason: string;
+  details?: string;
+  violations?: string[];
+}
 
 export default function CreatePromotion() {
   const navigate = useNavigate();
@@ -31,6 +39,12 @@ export default function CreatePromotion() {
   });
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  
+  // Validation states
+  const [validatingLogo, setValidatingLogo] = useState(false);
+  const [logoValidation, setLogoValidation] = useState<ValidationResult | null>(null);
+  const [validatingText, setValidatingText] = useState(false);
+  const [textValidation, setTextValidation] = useState<ValidationResult | null>(null);
 
   useEffect(() => {
     checkUserRoleAndData();
@@ -127,18 +141,93 @@ export default function CreatePromotion() {
     return isAdmin ? '/admin-panel' : '/sponsor-dashboard';
   };
 
-  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const validateContent = async (imageUrl: string | null, text: string | null, type: string): Promise<ValidationResult> => {
+    try {
+      const response = await supabase.functions.invoke('validate-content', {
+        body: { imageUrl, text, type }
+      });
+      
+      if (response.error) {
+        console.error('Validation error:', response.error);
+        return {
+          approved: false,
+          reason: 'Erro ao validar conteúdo. Tente novamente.'
+        };
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error('Validation error:', error);
+      return {
+        approved: false,
+        reason: 'Erro ao conectar com o serviço de validação.'
+      };
+    }
+  };
+
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
     setLogoFile(file);
+    setLogoValidation(null);
     
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setLogoPreview(reader.result as string);
+      reader.onloadend = async () => {
+        const base64Image = reader.result as string;
+        setLogoPreview(base64Image);
+        
+        // Validate the logo with AI
+        setValidatingLogo(true);
+        const result = await validateContent(base64Image, null, 'logo');
+        setLogoValidation(result);
+        setValidatingLogo(false);
+        
+        if (!result.approved) {
+          toast({
+            title: "Logo não aprovado",
+            description: result.reason,
+            variant: "destructive",
+          });
+          // Clear the file if not approved
+          setLogoFile(null);
+          setLogoPreview(null);
+        } else {
+          toast({
+            title: "Logo aprovado",
+            description: "A imagem está em conformidade com as normas.",
+            className: "bg-green-500 text-white",
+          });
+        }
       };
       reader.readAsDataURL(file);
     } else {
       setLogoPreview(null);
+    }
+  };
+  
+  const handlePrizeDescriptionBlur = async () => {
+    if (!formData.prize_description.trim()) {
+      setTextValidation(null);
+      return;
+    }
+    
+    setValidatingText(true);
+    const result = await validateContent(null, formData.prize_description, 'promotion_text');
+    setTextValidation(result);
+    setValidatingText(false);
+    
+    if (!result.approved) {
+      toast({
+        title: "Descrição não aprovada",
+        description: result.reason,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Descrição aprovada",
+        description: "O texto está em conformidade com as normas.",
+        className: "bg-green-500 text-white",
+      });
     }
   };
 
@@ -150,6 +239,26 @@ export default function CreatePromotion() {
       toast({
         title: "Logo obrigatório",
         description: "Por favor, adicione o logo da empresa.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Verificar se logo foi aprovado
+    if (!logoValidation?.approved) {
+      toast({
+        title: "Logo não aprovado",
+        description: "O logo não foi aprovado pela validação. Por favor, escolha outra imagem.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Verificar se texto foi validado e aprovado
+    if (textValidation && !textValidation.approved) {
+      toast({
+        title: "Descrição não aprovada",
+        description: "A descrição do prêmio não foi aprovada. Por favor, revise o texto.",
         variant: "destructive",
       });
       return;
@@ -442,7 +551,13 @@ export default function CreatePromotion() {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="logo">Logo da Empresa *</Label>
+                <Label htmlFor="logo" className="flex items-center gap-2">
+                  Logo da Empresa *
+                  <Shield className="h-4 w-4 text-muted-foreground" />
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  A imagem será analisada por IA para conformidade com CDC, CONAR, ECA e LGPD.
+                </p>
                 <div className="space-y-4">
                   <div className="flex items-center gap-4">
                     <Input
@@ -452,33 +567,105 @@ export default function CreatePromotion() {
                       onChange={handleLogoChange}
                       className="flex-1"
                       required
+                      disabled={validatingLogo}
                     />
-                    <Upload className="h-5 w-5 text-muted-foreground" />
+                    {validatingLogo ? (
+                      <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                    ) : (
+                      <Upload className="h-5 w-5 text-muted-foreground" />
+                    )}
                   </div>
-                  {logoPreview && (
+                  
+                  {validatingLogo && (
+                    <Alert className="bg-blue-50 dark:bg-blue-950/30 border-blue-200">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <AlertDescription>
+                        Analisando imagem com IA para conformidade legal...
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  
+                  {logoValidation && (
+                    <Alert className={logoValidation.approved 
+                      ? "bg-green-50 dark:bg-green-950/30 border-green-500" 
+                      : "bg-red-50 dark:bg-red-950/30 border-red-500"
+                    }>
+                      {logoValidation.approved ? (
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <XCircle className="h-4 w-4 text-red-600" />
+                      )}
+                      <AlertDescription className={logoValidation.approved ? "text-green-700" : "text-red-700"}>
+                        {logoValidation.approved 
+                          ? "✓ Imagem aprovada - Em conformidade com as normas" 
+                          : `✗ Imagem não aprovada: ${logoValidation.reason}`}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  
+                  {logoPreview && logoValidation?.approved && (
                     <div className="flex justify-center">
-                      <img 
-                        src={logoPreview} 
-                        alt="Preview do logo" 
-                        className="h-32 w-32 object-contain border-2 border-border rounded-lg"
-                      />
+                      <div className="relative">
+                        <img 
+                          src={logoPreview} 
+                          alt="Preview do logo" 
+                          className="h-32 w-32 object-contain border-2 border-green-500 rounded-lg"
+                        />
+                        <CheckCircle className="absolute -top-2 -right-2 h-6 w-6 text-green-500 bg-white rounded-full" />
+                      </div>
                     </div>
                   )}
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="prize_description">Descrição do Prêmio *</Label>
+                <Label htmlFor="prize_description" className="flex items-center gap-2">
+                  Descrição do Prêmio *
+                  <Shield className="h-4 w-4 text-muted-foreground" />
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  O texto será analisado por IA para conformidade com as normas legais.
+                </p>
                 <Textarea
                   id="prize_description"
                   value={formData.prize_description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, prize_description: e.target.value })
-                  }
+                  onChange={(e) => {
+                    setFormData({ ...formData, prize_description: e.target.value });
+                    setTextValidation(null);
+                  }}
+                  onBlur={handlePrizeDescriptionBlur}
                   placeholder="Descreva o prêmio oferecido..."
                   required
                   rows={4}
+                  disabled={validatingText}
                 />
+                
+                {validatingText && (
+                  <Alert className="bg-blue-50 dark:bg-blue-950/30 border-blue-200">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <AlertDescription>
+                      Analisando texto com IA para conformidade legal...
+                    </AlertDescription>
+                  </Alert>
+                )}
+                
+                {textValidation && (
+                  <Alert className={textValidation.approved 
+                    ? "bg-green-50 dark:bg-green-950/30 border-green-500" 
+                    : "bg-red-50 dark:bg-red-950/30 border-red-500"
+                  }>
+                    {textValidation.approved ? (
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <XCircle className="h-4 w-4 text-red-600" />
+                    )}
+                    <AlertDescription className={textValidation.approved ? "text-green-700" : "text-red-700"}>
+                      {textValidation.approved 
+                        ? "✓ Texto aprovado - Em conformidade com as normas" 
+                        : `✗ Texto não aprovado: ${textValidation.reason}`}
+                    </AlertDescription>
+                  </Alert>
+                )}
               </div>
 
               <div className="space-y-2">

@@ -5,10 +5,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Building2, Upload, ArrowLeft } from 'lucide-react';
+import { Building2, Upload, ArrowLeft, Loader2, CheckCircle, XCircle, Shield } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import paymentQRCode from '@/assets/payment-qrcode.jpg';
+
+interface ValidationResult {
+  approved: boolean;
+  reason: string;
+  details?: string;
+  violations?: string[];
+}
 
 const PLAN_OPTIONS = [
   { value: 'test', label: 'Teste', price: 10.00 },
@@ -26,6 +33,8 @@ export default function SponsorRegister() {
   const [paymentProofPreview, setPaymentProofPreview] = useState<string>('');
   const [promotionLimits, setPromotionLimits] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [validatingImage, setValidatingImage] = useState(false);
+  const [imageValidation, setImageValidation] = useState<ValidationResult | null>(null);
   const renewalData = location.state?.renewalData;
   const isRenewal = !!renewalData;
   
@@ -87,15 +96,67 @@ export default function SponsorRegister() {
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const validateContent = async (imageUrl: string): Promise<ValidationResult> => {
+    try {
+      const response = await supabase.functions.invoke('validate-content', {
+        body: { imageUrl, text: null, type: 'payment_proof' }
+      });
+      
+      if (response.error) {
+        console.error('Validation error:', response.error);
+        return {
+          approved: false,
+          reason: 'Erro ao validar conteúdo. Tente novamente.'
+        };
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error('Validation error:', error);
+      return {
+        approved: false,
+        reason: 'Erro ao conectar com o serviço de validação.'
+      };
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    setImageValidation(null);
+    
     if (file) {
       setPaymentProofFile(file);
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setPaymentProofPreview(reader.result as string);
+      reader.onloadend = async () => {
+        const base64Image = reader.result as string;
+        setPaymentProofPreview(base64Image);
+        
+        // Validate with AI
+        setValidatingImage(true);
+        const result = await validateContent(base64Image);
+        setImageValidation(result);
+        setValidatingImage(false);
+        
+        if (!result.approved) {
+          toast({
+            title: "Imagem não aprovada",
+            description: result.reason,
+            variant: "destructive",
+          });
+          setPaymentProofFile(null);
+          setPaymentProofPreview('');
+        } else {
+          toast({
+            title: "Imagem aprovada",
+            description: "O comprovante está em conformidade.",
+            className: "bg-green-500 text-white",
+          });
+        }
       };
       reader.readAsDataURL(file);
+    } else {
+      setPaymentProofFile(null);
+      setPaymentProofPreview('');
     }
   };
 
@@ -136,6 +197,16 @@ export default function SponsorRegister() {
       toast({
         title: "Comprovante obrigatório",
         description: "Por favor, anexe o comprovante de pagamento.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Verificar se imagem foi aprovada
+    if (!imageValidation?.approved) {
+      toast({
+        title: "Comprovante não aprovado",
+        description: "O comprovante não foi aprovado pela validação. Por favor, escolha outra imagem.",
         variant: "destructive",
       });
       return;
@@ -417,9 +488,19 @@ export default function SponsorRegister() {
             </div>
 
             <div className="space-y-4">
-              <Label htmlFor="payment-proof">Comprovante de Pagamento *</Label>
+              <Label htmlFor="payment-proof" className="flex items-center gap-2">
+                Comprovante de Pagamento *
+                <Shield className="h-4 w-4 text-muted-foreground" />
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                A imagem será analisada por IA para conformidade com as normas legais.
+              </p>
               <div className="border-2 border-dashed border-border rounded-lg p-6 text-center space-y-4 hover:border-primary transition-colors">
-                <Upload className="w-12 h-12 mx-auto text-muted-foreground" />
+                {validatingImage ? (
+                  <Loader2 className="w-12 h-12 mx-auto text-primary animate-spin" />
+                ) : (
+                  <Upload className="w-12 h-12 mx-auto text-muted-foreground" />
+                )}
                 <div>
                   <Input
                     id="payment-proof"
@@ -427,25 +508,57 @@ export default function SponsorRegister() {
                     accept="image/*,.pdf"
                     onChange={handleFileChange}
                     className="hidden"
+                    disabled={validatingImage}
                   />
                   <Label 
                     htmlFor="payment-proof"
-                    className="cursor-pointer text-primary hover:underline"
+                    className={`cursor-pointer text-primary hover:underline ${validatingImage ? 'pointer-events-none opacity-50' : ''}`}
                   >
-                    Clique aqui para anexar o comprovante
+                    {validatingImage ? 'Analisando imagem...' : 'Clique aqui para anexar o comprovante'}
                   </Label>
                   <p className="text-xs text-muted-foreground mt-2">
                     Formatos aceitos: JPG, PNG, PDF (máx. 10MB)
                   </p>
                 </div>
-                {paymentProofPreview && (
+                
+                {validatingImage && (
+                  <Alert className="bg-blue-50 dark:bg-blue-950/30 border-blue-200">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <AlertDescription>
+                      Analisando imagem com IA para conformidade legal...
+                    </AlertDescription>
+                  </Alert>
+                )}
+                
+                {imageValidation && (
+                  <Alert className={imageValidation.approved 
+                    ? "bg-green-50 dark:bg-green-950/30 border-green-500" 
+                    : "bg-red-50 dark:bg-red-950/30 border-red-500"
+                  }>
+                    {imageValidation.approved ? (
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <XCircle className="h-4 w-4 text-red-600" />
+                    )}
+                    <AlertDescription className={imageValidation.approved ? "text-green-700" : "text-red-700"}>
+                      {imageValidation.approved 
+                        ? "✓ Imagem aprovada - Em conformidade com as normas" 
+                        : `✗ Imagem não aprovada: ${imageValidation.reason}`}
+                    </AlertDescription>
+                  </Alert>
+                )}
+                
+                {paymentProofPreview && imageValidation?.approved && (
                   <div className="mt-4">
-                    <img 
-                      src={paymentProofPreview} 
-                      alt="Preview do comprovante" 
-                      className="max-w-xs mx-auto rounded-lg border border-border"
-                    />
-                    <p className="text-sm text-success mt-2">✓ Arquivo anexado</p>
+                    <div className="relative inline-block">
+                      <img 
+                        src={paymentProofPreview} 
+                        alt="Preview do comprovante" 
+                        className="max-w-xs mx-auto rounded-lg border-2 border-green-500"
+                      />
+                      <CheckCircle className="absolute -top-2 -right-2 h-6 w-6 text-green-500 bg-white rounded-full" />
+                    </div>
+                    <p className="text-sm text-green-600 mt-2">✓ Comprovante aprovado</p>
                   </div>
                 )}
               </div>

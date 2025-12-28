@@ -1,1 +1,10 @@
 project_id = "zpkvkgryuuvhbklikdrp"
+
+[functions.change-user-password]
+verify_jwt = true
+
+[functions.create-admin-user]
+verify_jwt = true
+
+[functions.validate-content]
+verify_jwt = false

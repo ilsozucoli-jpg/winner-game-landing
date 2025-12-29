@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useGame } from '@/contexts/GameContext';
 
@@ -8,13 +7,18 @@ const WHEEL_VALUES = [500, 300, 800, 100, 200, 600, 1000, 700, 100, 500, 600, 10
 export function WheelOfFortune({ onComplete, stage }: { onComplete: () => void; stage: number }) {
   const [isSpinning, setIsSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
-  const { addPoints, addWheelPoints } = useGame();
+  const [showExplosion, setShowExplosion] = useState(false);
+  const { addPoints, addWheelPoints, selectedSponsor } = useGame();
   const { toast } = useToast();
 
   const spinWheel = () => {
     if (isSpinning) return;
 
     setIsSpinning(true);
+    setShowExplosion(true);
+    
+    // Remove explosion effect after animation
+    setTimeout(() => setShowExplosion(false), 1000);
     
     // Calcula rotações aleatórias (5-10 voltas completas + posição final)
     const spins = 5 + Math.floor(Math.random() * 5);
@@ -136,28 +140,69 @@ export function WheelOfFortune({ onComplete, stage }: { onComplete: () => void; 
               );
             })}
             
-            {/* Centro da roleta */}
-            <div className="absolute inset-0 m-auto w-24 h-24 rounded-full shadow-2xl flex items-center justify-center"
+            {/* Centro da roleta com logo do patrocinador */}
+            <div 
+              className={`absolute inset-0 m-auto w-28 h-28 rounded-full shadow-2xl flex flex-col items-center justify-center cursor-pointer transition-transform hover:scale-105 ${!isSpinning ? 'animate-pulse' : ''}`}
               style={{
                 background: 'radial-gradient(circle, #FFD700 0%, #FFA500 100%)',
                 border: '4px solid #FFD700',
               }}
+              onClick={spinWheel}
             >
-              <div className="text-4xl font-bold drop-shadow-lg">💰</div>
+              {/* Explosion Effects */}
+              {showExplosion && (
+                <>
+                  {[...Array(12)].map((_, i) => (
+                    <div
+                      key={i}
+                      className="absolute w-3 h-3 rounded-full animate-explosion"
+                      style={{
+                        background: ['#FF1493', '#FFD700', '#00BFFF', '#FF0000', '#8B00FF', '#FF6B00'][i % 6],
+                        transform: `rotate(${i * 30}deg)`,
+                        animationDelay: `${i * 0.05}s`,
+                      }}
+                    />
+                  ))}
+                  {[...Array(8)].map((_, i) => (
+                    <div
+                      key={`star-${i}`}
+                      className="absolute text-2xl animate-explosion-star"
+                      style={{
+                        transform: `rotate(${i * 45}deg)`,
+                        animationDelay: `${i * 0.08}s`,
+                      }}
+                    >
+                      ✨
+                    </div>
+                  ))}
+                </>
+              )}
+              
+              {/* Logo do patrocinador */}
+              {selectedSponsor?.logo_url ? (
+                <img 
+                  src={selectedSponsor.logo_url} 
+                  alt={selectedSponsor.name}
+                  className="w-16 h-16 object-contain rounded-full"
+                />
+              ) : (
+                <div className="text-3xl">💰</div>
+              )}
+              
+              {/* Texto GIRAR */}
+              {!isSpinning && (
+                <span className="text-xs font-bold text-amber-900 mt-1 drop-shadow-sm">
+                  GIRAR
+                </span>
+              )}
             </div>
           </div>
         </div>
       </div>
 
-      <Button 
-        variant="game" 
-        size="xl"
-        onClick={spinWheel}
-        disabled={isSpinning}
-        className="animate-bounce-in"
-      >
-        {isSpinning ? 'Girando...' : 'GIRAR ROLETA'}
-      </Button>
+      <p className="text-muted-foreground text-sm">
+        {isSpinning ? 'Girando...' : 'Clique no centro para girar!'}
+      </p>
     </div>
   );
 }

@@ -1,15 +1,18 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Building2, MapPin, Award, Loader2, Clock, Search, X } from 'lucide-react';
+import { Building2, MapPin, Award, Loader2, Clock, Search, X, Map } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useGame } from '@/contexts/GameContext';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { FixedHeader } from '@/components/FixedHeader';
+
+// Lazy load the map component
+const PromotionsMap = lazy(() => import('@/components/PromotionsMap'));
 
 interface Sponsor {
   id: string;
@@ -20,6 +23,8 @@ interface Sponsor {
   phone: string;
   prize_count: number;
   promotion_end_date?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 const ITEMS_PER_PAGE = 10;
@@ -33,6 +38,7 @@ export default function SponsorSelection() {
   const [selecting, setSelecting] = useState(false);
   const [cityFilter, setCityFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [showMap, setShowMap] = useState(false);
 
   useEffect(() => {
     resetGame(); // Zerar pontos ao entrar na tela
@@ -90,7 +96,9 @@ export default function SponsorSelection() {
         prize_description: s.prize_description,
         phone: s.phone,
         prize_count: s.prize_count || 1,
-        promotion_end_date: s.promotion_end_date
+        promotion_end_date: s.promotion_end_date,
+        latitude: s.latitude,
+        longitude: s.longitude
       }));
       
       // Separar patrocinadores ativos e expirados
@@ -168,7 +176,8 @@ export default function SponsorSelection() {
         variant: "destructive",
       });
     } finally {
-      setSelecting(false);
+    setSelecting(false);
+    setShowMap(false);
     }
   };
 
@@ -231,6 +240,22 @@ export default function SponsorSelection() {
   return (
     <div className="min-h-screen bg-background p-6">
       <FixedHeader />
+      
+      {/* Map Modal */}
+      {showMap && (
+        <Suspense fallback={
+          <div className="fixed inset-0 bg-background z-50 flex items-center justify-center">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        }>
+          <PromotionsMap 
+            sponsors={sponsors} 
+            onSelectSponsor={handleSelectSponsor}
+            onClose={() => setShowMap(false)}
+          />
+        </Suspense>
+      )}
+      
       <div className="max-w-6xl mx-auto space-y-8">
         <div className="text-center space-y-2">
           <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent">
@@ -239,6 +264,19 @@ export default function SponsorSelection() {
           <p className="text-muted-foreground">
             Selecione uma promoção para começar a jogar
           </p>
+        </div>
+        
+        {/* Map button */}
+        <div className="flex justify-center">
+          <Button 
+            variant="outline" 
+            size="lg"
+            onClick={() => setShowMap(true)}
+            className="gap-2 border-primary/50 hover:bg-primary/10"
+          >
+            <Map className="w-5 h-5 text-primary" />
+            Mapa das Promoções
+          </Button>
         </div>
 
         {/* Filtro por cidade */}

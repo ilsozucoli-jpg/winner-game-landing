@@ -1,4 +1,117 @@
 @tailwind base;
+
+/* Leaflet Map Styles */
+.leaflet-container {
+  font-family: inherit;
+}
+
+/* Pulsing target marker for promotions */
+.pulsing-target {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pulsing-target-core {
+  width: 16px;
+  height: 16px;
+  background: linear-gradient(135deg, hsl(142, 76%, 45%), hsl(142, 76%, 35%));
+  border-radius: 50%;
+  border: 3px solid white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  z-index: 2;
+  position: relative;
+}
+
+.pulsing-target-core::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 6px;
+  height: 6px;
+  background: white;
+  border-radius: 50%;
+}
+
+.pulsing-target-ring {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  border: 3px solid hsl(142, 76%, 45%);
+  border-radius: 50%;
+  animation: pulse-ring 1.5s ease-out infinite;
+  opacity: 0;
+}
+
+.pulsing-target-ring.delay-1 {
+  animation-delay: 0.75s;
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.5);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+/* User location marker */
+.user-location {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.user-location-dot {
+  width: 14px;
+  height: 14px;
+  background: hsl(217, 91%, 60%);
+  border-radius: 50%;
+  border: 3px solid white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  z-index: 2;
+}
+
+.user-location-pulse {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  background: hsla(217, 91%, 60%, 0.3);
+  border-radius: 50%;
+  animation: user-pulse 2s ease-out infinite;
+}
+
+@keyframes user-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+/* Custom Leaflet popup styles */
+.leaflet-popup-content-wrapper {
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.leaflet-popup-content {
+  margin: 8px 12px;
+}
 @tailwind components;
 @tailwind utilities;
 

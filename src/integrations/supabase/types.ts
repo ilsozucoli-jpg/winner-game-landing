@@ -69,7 +69,9 @@ export type Database = {
           city: string | null
           created_at: string
           id: string
+          latitude: number | null
           logo_url: string | null
+          longitude: number | null
           name: string | null
           phone: string
           prize_count: number
@@ -85,7 +87,9 @@ export type Database = {
           city?: string | null
           created_at?: string
           id?: string
+          latitude?: number | null
           logo_url?: string | null
+          longitude?: number | null
           name?: string | null
           phone: string
           prize_count?: number
@@ -101,7 +105,9 @@ export type Database = {
           city?: string | null
           created_at?: string
           id?: string
+          latitude?: number | null
           logo_url?: string | null
+          longitude?: number | null
           name?: string | null
           phone?: string
           prize_count?: number
@@ -161,6 +167,8 @@ export type Database = {
           created_at: string
           email: string | null
           id: string
+          latitude: number | null
+          longitude: number | null
           name: string
           payment_proof_url: string | null
           phone: string | null
@@ -179,6 +187,8 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           name: string
           payment_proof_url?: string | null
           phone?: string | null
@@ -197,6 +207,8 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           name?: string
           payment_proof_url?: string | null
           phone?: string | null
@@ -215,7 +227,9 @@ export type Database = {
           city: string | null
           created_at: string
           id: string
+          latitude: number | null
           logo_url: string | null
+          longitude: number | null
           name: string | null
           phone: string
           prize_count: number
@@ -230,7 +244,9 @@ export type Database = {
           city?: string | null
           created_at?: string
           id?: string
+          latitude?: number | null
           logo_url?: string | null
+          longitude?: number | null
           name?: string | null
           phone: string
           prize_count?: number
@@ -245,7 +261,9 @@ export type Database = {
           city?: string | null
           created_at?: string
           id?: string
+          latitude?: number | null
           logo_url?: string | null
+          longitude?: number | null
           name?: string | null
           phone?: string
           prize_count?: number

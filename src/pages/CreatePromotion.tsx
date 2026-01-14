@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Loader2, Upload, CheckCircle, XCircle, Shield } from 'lucide-react';
+import { ArrowLeft, Loader2, Upload, CheckCircle, XCircle, Shield, MapPin } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface ValidationResult {
@@ -15,6 +15,12 @@ interface ValidationResult {
   reason: string;
   details?: string;
   violations?: string[];
+}
+
+interface GeoLocation {
+  latitude: number;
+  longitude: number;
+  formattedAddress?: string;
 }
 
 export default function CreatePromotion() {
@@ -36,6 +42,7 @@ export default function CreatePromotion() {
     promotion_end_date: '',
     city: '',
     state: '',
+    address: '',
   });
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -45,6 +52,10 @@ export default function CreatePromotion() {
   const [logoValidation, setLogoValidation] = useState<ValidationResult | null>(null);
   const [validatingText, setValidatingText] = useState(false);
   const [textValidation, setTextValidation] = useState<ValidationResult | null>(null);
+  
+  // Geocoding states
+  const [geocoding, setGeocoding] = useState(false);
+  const [geoLocation, setGeoLocation] = useState<GeoLocation | null>(null);
 
   useEffect(() => {
     checkUserRoleAndData();
@@ -124,7 +135,16 @@ export default function CreatePromotion() {
           phone: sponsorReg.phone || '',
           city: sponsorReg.city || '',
           state: sponsorReg.state || '',
+          address: sponsorReg.address || '',
         }));
+        
+        // Se o patrocinador já tem coordenadas, usar
+        if (sponsorReg.latitude && sponsorReg.longitude) {
+          setGeoLocation({
+            latitude: sponsorReg.latitude,
+            longitude: sponsorReg.longitude
+          });
+        }
       }
     } catch (error: any) {
       toast({
@@ -228,6 +248,62 @@ export default function CreatePromotion() {
         description: "O texto está em conformidade com as normas.",
         className: "bg-green-500 text-white",
       });
+    }
+  };
+
+  const geocodeAddress = async () => {
+    const address = formData.address || sponsorData?.address;
+    const city = formData.city || sponsorData?.city;
+    const state = formData.state || sponsorData?.state;
+
+    if (!address || !city || !state) {
+      toast({
+        title: "Campos incompletos",
+        description: "Endereço, cidade e estado são necessários para obter a localização.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setGeocoding(true);
+    setGeoLocation(null);
+
+    try {
+      const response = await supabase.functions.invoke('geocode-address', {
+        body: { address, city, state }
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      if (response.data.success) {
+        setGeoLocation({
+          latitude: response.data.latitude,
+          longitude: response.data.longitude,
+          formattedAddress: response.data.formattedAddress
+        });
+        toast({
+          title: "Localização encontrada!",
+          description: "As coordenadas foram obtidas com sucesso.",
+          className: "bg-green-500 text-white",
+        });
+      } else {
+        toast({
+          title: "Localização não encontrada",
+          description: response.data.error || "Verifique o endereço informado.",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      console.error('Geocoding error:', error);
+      toast({
+        title: "Erro na geocodificação",
+        description: error.message || "Não foi possível obter as coordenadas.",
+        variant: "destructive",
+      });
+    } finally {
+      setGeocoding(false);
     }
   };
 
@@ -359,6 +435,12 @@ export default function CreatePromotion() {
         city: formData.city || null,
         state: formData.state || null,
       };
+      
+      // Adicionar coordenadas se disponíveis
+      if (geoLocation) {
+        insertData.latitude = geoLocation.latitude;
+        insertData.longitude = geoLocation.longitude;
+      }
 
       if (isAdmin) {
         // Admin insere diretamente na tabela sponsors (definitiva)
@@ -731,13 +813,32 @@ export default function CreatePromotion() {
                 />
               </div>
 
+              {isAdmin && (
+                <div className="space-y-2">
+                  <Label htmlFor="address">Endereço</Label>
+                  <Input
+                    id="address"
+                    value={formData.address}
+                    onChange={(e) => {
+                      setFormData({ ...formData, address: e.target.value });
+                      setGeoLocation(null);
+                    }}
+                    placeholder="Rua, número, complemento"
+                    className="bg-background"
+                  />
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="city">Cidade</Label>
                   <Input
                     id="city"
                     value={formData.city}
-                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, city: e.target.value });
+                      setGeoLocation(null);
+                    }}
                     placeholder="Digite a cidade"
                     className={isAdmin ? "bg-background" : "bg-yellow-200 dark:bg-yellow-900"}
                     disabled={!isAdmin && !!sponsorData?.city}
@@ -749,13 +850,65 @@ export default function CreatePromotion() {
                   <Input
                     id="state"
                     value={formData.state}
-                    onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, state: e.target.value.toUpperCase() });
+                      setGeoLocation(null);
+                    }}
                     placeholder="Ex: SP"
                     maxLength={2}
                     className={isAdmin ? "bg-background" : "bg-yellow-200 dark:bg-yellow-900"}
                     disabled={!isAdmin && !!sponsorData?.state}
                   />
                 </div>
+              </div>
+              
+              {/* Geocoding section */}
+              <div className="space-y-3 p-4 bg-accent/20 rounded-lg border border-border">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-5 h-5 text-primary" />
+                    <Label className="font-semibold">Localização no Mapa</Label>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={geocodeAddress}
+                    disabled={geocoding}
+                  >
+                    {geocoding ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Buscando...
+                      </>
+                    ) : (
+                      <>
+                        <MapPin className="w-4 h-4 mr-2" />
+                        Obter Localização
+                      </>
+                    )}
+                  </Button>
+                </div>
+                
+                {geoLocation ? (
+                  <Alert className="bg-green-50 dark:bg-green-950/30 border-green-200">
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                    <AlertDescription className="text-sm text-green-800 dark:text-green-200">
+                      <strong>Localização encontrada!</strong>
+                      <br />
+                      <span className="text-xs opacity-80">
+                        Lat: {geoLocation.latitude.toFixed(6)}, Lng: {geoLocation.longitude.toFixed(6)}
+                      </span>
+                      {geoLocation.formattedAddress && (
+                        <p className="text-xs mt-1 opacity-70">{geoLocation.formattedAddress}</p>
+                      )}
+                    </AlertDescription>
+                  </Alert>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Clique em "Obter Localização" para que sua promoção apareça no mapa dos jogadores.
+                  </p>
+                )}
               </div>
 
               <Button 

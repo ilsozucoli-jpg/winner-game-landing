@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Building2, Upload, ArrowLeft, Loader2, CheckCircle, XCircle, Shield } from 'lucide-react';
+import { Building2, Upload, ArrowLeft, Loader2, CheckCircle, XCircle, Shield, MapPin } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import paymentQRCode from '@/assets/payment-qrcode.jpg';
@@ -15,6 +15,12 @@ interface ValidationResult {
   reason: string;
   details?: string;
   violations?: string[];
+}
+
+interface GeoLocation {
+  latitude: number;
+  longitude: number;
+  formattedAddress?: string;
 }
 
 const PLAN_OPTIONS = [
@@ -35,6 +41,8 @@ export default function SponsorRegister() {
   const [loading, setLoading] = useState(true);
   const [validatingImage, setValidatingImage] = useState(false);
   const [imageValidation, setImageValidation] = useState<ValidationResult | null>(null);
+  const [geocoding, setGeocoding] = useState(false);
+  const [geoLocation, setGeoLocation] = useState<GeoLocation | null>(null);
   const renewalData = location.state?.renewalData;
   const isRenewal = !!renewalData;
   
@@ -117,6 +125,62 @@ export default function SponsorRegister() {
         approved: false,
         reason: 'Erro ao conectar com o serviço de validação.'
       };
+    }
+  };
+
+  const geocodeAddress = async () => {
+    if (!formData.address || !formData.city || !formData.state) {
+      toast({
+        title: "Campos incompletos",
+        description: "Preencha endereço, cidade e estado para obter a localização.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setGeocoding(true);
+    setGeoLocation(null);
+
+    try {
+      const response = await supabase.functions.invoke('geocode-address', {
+        body: {
+          address: formData.address,
+          city: formData.city,
+          state: formData.state
+        }
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      if (response.data.success) {
+        setGeoLocation({
+          latitude: response.data.latitude,
+          longitude: response.data.longitude,
+          formattedAddress: response.data.formattedAddress
+        });
+        toast({
+          title: "Localização encontrada!",
+          description: "As coordenadas foram obtidas com sucesso.",
+          className: "bg-green-500 text-white",
+        });
+      } else {
+        toast({
+          title: "Localização não encontrada",
+          description: response.data.error || "Verifique o endereço informado.",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      console.error('Geocoding error:', error);
+      toast({
+        title: "Erro na geocodificação",
+        description: error.message || "Não foi possível obter as coordenadas.",
+        variant: "destructive",
+      });
+    } finally {
+      setGeocoding(false);
     }
   };
 
@@ -228,18 +292,26 @@ export default function SponsorRegister() {
         const selectedPlan = PLAN_OPTIONS.find(p => p.value === formData.plan);
 
         // Atualizar registro de patrocinador
+        const updateData: any = {
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          phone: formData.phone,
+          plan: formData.plan,
+          plan_value: selectedPlan?.price || 0,
+          payment_proof_url: paymentProofUrl,
+          status: 'pending',
+        };
+        
+        // Adicionar coordenadas se disponíveis
+        if (geoLocation) {
+          updateData.latitude = geoLocation.latitude;
+          updateData.longitude = geoLocation.longitude;
+        }
+
         const { error: updateError } = await supabase
           .from('sponsor_registrations')
-          .update({
-            address: formData.address,
-            city: formData.city,
-            state: formData.state,
-            phone: formData.phone,
-            plan: formData.plan,
-            plan_value: selectedPlan?.price || 0,
-            payment_proof_url: paymentProofUrl,
-            status: 'pending',
-          })
+          .update(updateData)
           .eq('user_id', user.id);
 
         if (updateError) throw updateError;
@@ -262,22 +334,30 @@ export default function SponsorRegister() {
         const selectedPlan = PLAN_OPTIONS.find(p => p.value === formData.plan);
         
         // Inserir registro de patrocinador
+        const insertData: any = {
+          user_id: user.id,
+          name: formData.name,
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          company: formData.company,
+          plan: formData.plan,
+          plan_value: selectedPlan?.price || 0,
+          payment_proof_url: paymentProofUrl,
+          status: 'pending',
+          phone: formData.phone,
+          email: formData.email,
+        };
+        
+        // Adicionar coordenadas se disponíveis
+        if (geoLocation) {
+          insertData.latitude = geoLocation.latitude;
+          insertData.longitude = geoLocation.longitude;
+        }
+
         const { error } = await supabase
           .from('sponsor_registrations')
-          .insert({
-            user_id: user.id,
-            name: formData.name,
-            address: formData.address,
-            city: formData.city,
-            state: formData.state,
-            company: formData.company,
-            plan: formData.plan,
-            plan_value: selectedPlan?.price || 0,
-            payment_proof_url: paymentProofUrl,
-            status: 'pending',
-            phone: formData.phone,
-            email: formData.email,
-          });
+          .insert(insertData);
 
         if (error) throw error;
 
@@ -396,7 +476,10 @@ export default function SponsorRegister() {
                   type="text"
                   placeholder="Rua, número, complemento"
                   value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, address: e.target.value });
+                    setGeoLocation(null); // Reset geolocation when address changes
+                  }}
                   className={isRenewal && renewalData?.address ? "bg-yellow-100 dark:bg-yellow-900/30" : "bg-background"}
                   required
                 />
@@ -410,7 +493,10 @@ export default function SponsorRegister() {
                   type="text"
                   placeholder="Sua cidade"
                   value={formData.city}
-                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, city: e.target.value });
+                    setGeoLocation(null); // Reset geolocation when address changes
+                  }}
                   className={isRenewal && renewalData?.city ? "bg-yellow-100 dark:bg-yellow-900/30" : "bg-background"}
                   required
                 />
@@ -424,10 +510,63 @@ export default function SponsorRegister() {
                   placeholder="UF"
                   maxLength={2}
                   value={formData.state}
-                  onChange={(e) => setFormData({ ...formData, state: e.target.value.toUpperCase() })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, state: e.target.value.toUpperCase() });
+                    setGeoLocation(null); // Reset geolocation when address changes
+                  }}
                   className={isRenewal && renewalData?.state ? "bg-yellow-100 dark:bg-yellow-900/30" : "bg-background"}
                   required
                 />
+              </div>
+            </div>
+            
+            {/* Geocoding section */}
+            <div className="space-y-3 p-4 bg-accent/20 rounded-lg border border-border">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-5 h-5 text-primary" />
+                  <Label className="font-semibold">Localização no Mapa</Label>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={geocodeAddress}
+                  disabled={geocoding || !formData.address || !formData.city || !formData.state}
+                >
+                  {geocoding ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Buscando...
+                    </>
+                  ) : (
+                    <>
+                      <MapPin className="w-4 h-4 mr-2" />
+                      Obter Localização
+                    </>
+                  )}
+                </Button>
+              </div>
+              
+              {geoLocation ? (
+                <Alert className="bg-green-50 dark:bg-green-950/30 border-green-200">
+                  <CheckCircle className="w-4 h-4 text-green-600" />
+                  <AlertDescription className="text-sm text-green-800 dark:text-green-200">
+                    <strong>Localização encontrada!</strong>
+                    <br />
+                    <span className="text-xs opacity-80">
+                      Lat: {geoLocation.latitude.toFixed(6)}, Lng: {geoLocation.longitude.toFixed(6)}
+                    </span>
+                    {geoLocation.formattedAddress && (
+                      <p className="text-xs mt-1 opacity-70">{geoLocation.formattedAddress}</p>
+                    )}
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Preencha o endereço completo e clique em "Obter Localização" para que sua promoção apareça no mapa dos jogadores.
+                </p>
+              )}
             </div>
 
             {promotionLimits && (
@@ -451,7 +590,6 @@ export default function SponsorRegister() {
                 </AlertDescription>
               </Alert>
             )}
-            </div>
 
             <div className="space-y-4">
               <Label>Plano de Patrocínio *</Label>

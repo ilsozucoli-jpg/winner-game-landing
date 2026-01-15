@@ -1,14 +1,27 @@
 import { useState, useEffect, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from 'react-leaflet';
-import { Icon, DivIcon, LatLngExpression } from 'leaflet';
+import L, { DivIcon, LatLngExpression } from 'leaflet';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { MapPin, Award, Clock, Phone, Target, Loader2, Navigation, ZoomIn, ZoomOut, LocateFixed } from 'lucide-react';
+import { MapPin, Award, Clock, Phone, Loader2, Navigation, ZoomIn, ZoomOut, LocateFixed, ArrowLeft } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import 'leaflet/dist/leaflet.css';
+
+// Fix for default marker icons in Leaflet with Vite
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+
+// @ts-ignore
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconUrl: markerIcon,
+  iconRetinaUrl: markerIcon2x,
+  shadowUrl: markerShadow,
+});
 
 interface Sponsor {
   id: string;
@@ -233,17 +246,24 @@ export default function PromotionsMap({ sponsors, onSelectSponsor, onClose }: Pr
 
   return (
     <div className="fixed inset-0 bg-background z-50 flex flex-col">
+      {/* Floating back button */}
+      <Button 
+        onClick={onClose} 
+        variant="secondary" 
+        size="icon"
+        className="fixed top-4 left-4 z-[1001] h-12 w-12 rounded-full shadow-lg"
+      >
+        <ArrowLeft className="h-6 w-6" />
+      </Button>
+
       {/* Header */}
-      <div className="p-4 bg-card border-b flex items-center justify-between">
+      <div className="p-4 bg-card border-b flex items-center justify-between pl-20">
         <div>
           <h2 className="text-lg font-bold">Mapa das Promoções</h2>
           <p className="text-sm text-muted-foreground">
             {sponsorsInRadius.length} promoções em {radius}km
           </p>
         </div>
-        <Button onClick={onClose} variant="outline" size="sm">
-          Voltar
-        </Button>
       </div>
 
       {/* Radius control */}

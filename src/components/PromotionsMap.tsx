@@ -122,23 +122,37 @@ export default function PromotionsMap({ sponsors, onSelectSponsor, onClose }: Pr
   const [radius, setRadius] = useState(2); // km
   const [selectedPromotion, setSelectedPromotion] = useState<Sponsor | null>(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [debugLogs, setDebugLogs] = useState<string[]>([]);
+  const [showDebug, setShowDebug] = useState(true);
+
+  const addLog = (message: string) => {
+    const timestamp = new Date().toLocaleTimeString('pt-BR');
+    const logMessage = `[${timestamp}] ${message}`;
+    console.log('[PromotionsMap]', message);
+    setDebugLogs(prev => [...prev.slice(-9), logMessage]); // Keep last 10 logs
+  };
 
   // Check permission state
   const checkPermission = async () => {
+    addLog('Verificando permissões de geolocalização...');
+    
     if (!navigator.permissions) {
-      // Fallback for browsers that don't support permissions API
+      addLog('API de permissões não suportada, usando fallback');
       setPermissionState('prompt');
       return;
     }
     
     try {
       const result = await navigator.permissions.query({ name: 'geolocation' });
+      addLog(`Estado da permissão: ${result.state}`);
       setPermissionState(result.state as 'prompt' | 'granted' | 'denied');
       
       result.onchange = () => {
+        addLog(`Permissão alterada para: ${result.state}`);
         setPermissionState(result.state as 'prompt' | 'granted' | 'denied');
       };
-    } catch {
+    } catch (err) {
+      addLog(`Erro ao verificar permissão: ${err}`);
       setPermissionState('prompt');
     }
   };
@@ -147,38 +161,44 @@ export default function PromotionsMap({ sponsors, onSelectSponsor, onClose }: Pr
   const requestLocation = () => {
     setLoading(true);
     setLocationError(null);
+    addLog('Iniciando requisição de geolocalização...');
     
     if (!navigator.geolocation) {
+      addLog('ERRO: Geolocalização não suportada');
       setLocationError('Geolocalização não suportada pelo seu navegador');
       setLoading(false);
       return;
     }
 
-    console.log('[PromotionsMap] Requesting geolocation...');
+    addLog('Solicitando posição atual ao navegador...');
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const lat = position.coords.latitude;
         const lng = position.coords.longitude;
-        console.log('[PromotionsMap] Geolocation obtained:', { lat, lng, accuracy: position.coords.accuracy });
+        addLog(`✓ Localização obtida: ${lat.toFixed(6)}, ${lng.toFixed(6)} (precisão: ${position.coords.accuracy}m)`);
         setUserPosition([lat, lng]);
         setPermissionState('granted');
         setLoading(false);
       },
       (error) => {
-        console.error('[PromotionsMap] Geolocation error:', error.code, error.message);
+        addLog(`✗ ERRO de geolocalização: código ${error.code} - ${error.message}`);
         switch (error.code) {
           case error.PERMISSION_DENIED:
+            addLog('Permissão negada pelo usuário');
             setLocationError('Permissão de localização negada. Por favor, habilite a localização nas configurações do seu navegador e tente novamente.');
             setPermissionState('denied');
             break;
           case error.POSITION_UNAVAILABLE:
+            addLog('Posição indisponível');
             setLocationError('Não foi possível obter sua localização. Verifique se o GPS está ativado.');
             break;
           case error.TIMEOUT:
+            addLog('Timeout ao obter localização');
             setLocationError('Tempo esgotado ao obter localização. Verifique sua conexão e tente novamente.');
             break;
           default:
+            addLog('Erro desconhecido');
             setLocationError('Erro desconhecido ao obter localização.');
         }
         setLoading(false);
@@ -192,11 +212,16 @@ export default function PromotionsMap({ sponsors, onSelectSponsor, onClose }: Pr
   };
 
   useEffect(() => {
+    addLog('Componente PromotionsMap montado');
+    addLog(`Total de patrocinadores recebidos: ${sponsors.length}`);
+    const withCoords = sponsors.filter(s => s.latitude && s.longitude).length;
+    addLog(`Patrocinadores com coordenadas: ${withCoords}`);
     checkPermission();
   }, []);
 
   useEffect(() => {
     if (permissionState !== 'checking') {
+      addLog(`Estado de permissão: ${permissionState}, iniciando requestLocation...`);
       requestLocation();
     }
   }, [permissionState]);
@@ -239,6 +264,47 @@ export default function PromotionsMap({ sponsors, onSelectSponsor, onClose }: Pr
     }
   };
 
+  // Debug panel component
+  const DebugPanel = () => {
+    if (!showDebug || debugLogs.length === 0) return null;
+    
+    return (
+      <div className="fixed bottom-4 left-4 right-4 z-[1002] max-w-md">
+        <Card className="bg-black/90 border-primary/50">
+          <CardContent className="p-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-bold text-primary">🔍 Debug Logs</span>
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                className="h-6 text-xs text-muted-foreground"
+                onClick={() => setShowDebug(false)}
+              >
+                Fechar
+              </Button>
+            </div>
+            <div className="space-y-1 max-h-40 overflow-y-auto">
+              {debugLogs.map((log, i) => (
+                <p 
+                  key={i} 
+                  className={`text-xs font-mono ${
+                    log.includes('ERRO') || log.includes('✗') 
+                      ? 'text-destructive' 
+                      : log.includes('✓') 
+                        ? 'text-green-400' 
+                        : 'text-muted-foreground'
+                  }`}
+                >
+                  {log}
+                </p>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="fixed inset-0 bg-background/95 z-50 flex items-center justify-center">
@@ -251,6 +317,7 @@ export default function PromotionsMap({ sponsors, onSelectSponsor, onClose }: Pr
             </p>
           </CardContent>
         </Card>
+        <DebugPanel />
       </div>
     );
   }
@@ -273,6 +340,7 @@ export default function PromotionsMap({ sponsors, onSelectSponsor, onClose }: Pr
             </div>
           </CardContent>
         </Card>
+        <DebugPanel />
       </div>
     );
   }
@@ -444,6 +512,9 @@ export default function PromotionsMap({ sponsors, onSelectSponsor, onClose }: Pr
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Debug panel on map view */}
+      <DebugPanel />
     </div>
   );
 }

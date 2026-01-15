@@ -118,9 +118,30 @@ export default function PromotionsMap({ sponsors, onSelectSponsor, onClose }: Pr
   const [userPosition, setUserPosition] = useState<[number, number] | null>(null);
   const [loading, setLoading] = useState(true);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [permissionState, setPermissionState] = useState<'prompt' | 'granted' | 'denied' | 'checking'>('checking');
   const [radius, setRadius] = useState(2); // km
   const [selectedPromotion, setSelectedPromotion] = useState<Sponsor | null>(null);
   const [showDetails, setShowDetails] = useState(false);
+
+  // Check permission state
+  const checkPermission = async () => {
+    if (!navigator.permissions) {
+      // Fallback for browsers that don't support permissions API
+      setPermissionState('prompt');
+      return;
+    }
+    
+    try {
+      const result = await navigator.permissions.query({ name: 'geolocation' });
+      setPermissionState(result.state as 'prompt' | 'granted' | 'denied');
+      
+      result.onchange = () => {
+        setPermissionState(result.state as 'prompt' | 'granted' | 'denied');
+      };
+    } catch {
+      setPermissionState('prompt');
+    }
+  };
 
   // Request geolocation
   const requestLocation = () => {
@@ -133,21 +154,29 @@ export default function PromotionsMap({ sponsors, onSelectSponsor, onClose }: Pr
       return;
     }
 
+    console.log('[PromotionsMap] Requesting geolocation...');
+
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setUserPosition([position.coords.latitude, position.coords.longitude]);
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        console.log('[PromotionsMap] Geolocation obtained:', { lat, lng, accuracy: position.coords.accuracy });
+        setUserPosition([lat, lng]);
+        setPermissionState('granted');
         setLoading(false);
       },
       (error) => {
+        console.error('[PromotionsMap] Geolocation error:', error.code, error.message);
         switch (error.code) {
           case error.PERMISSION_DENIED:
-            setLocationError('Permissão de localização negada. Habilite nas configurações do navegador.');
+            setLocationError('Permissão de localização negada. Por favor, habilite a localização nas configurações do seu navegador e tente novamente.');
+            setPermissionState('denied');
             break;
           case error.POSITION_UNAVAILABLE:
-            setLocationError('Informação de localização indisponível.');
+            setLocationError('Não foi possível obter sua localização. Verifique se o GPS está ativado.');
             break;
           case error.TIMEOUT:
-            setLocationError('Tempo esgotado ao obter localização.');
+            setLocationError('Tempo esgotado ao obter localização. Verifique sua conexão e tente novamente.');
             break;
           default:
             setLocationError('Erro desconhecido ao obter localização.');
@@ -156,15 +185,21 @@ export default function PromotionsMap({ sponsors, onSelectSponsor, onClose }: Pr
       },
       {
         enableHighAccuracy: true,
-        timeout: 10000,
+        timeout: 15000,
         maximumAge: 0
       }
     );
   };
 
   useEffect(() => {
-    requestLocation();
+    checkPermission();
   }, []);
+
+  useEffect(() => {
+    if (permissionState !== 'checking') {
+      requestLocation();
+    }
+  }, [permissionState]);
 
   // Filter sponsors with valid coordinates within radius
   const sponsorsInRadius = useMemo(() => {

@@ -395,6 +395,11 @@ export default function PromotionsMap({ sponsors, onSelectSponsor, onClose }: Pr
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            eventHandlers={{
+              tileloadstart: () => addLog('Carregando tiles do mapa...'),
+              load: () => addLog('✓ Tiles do mapa carregados com sucesso'),
+              tileerror: (e) => addLog(`✗ Erro ao carregar tile: ${e.type}`)
+            }}
           />
           
           <RecenterMap position={userPosition} />

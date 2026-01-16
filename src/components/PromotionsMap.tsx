@@ -393,10 +393,11 @@ export default function PromotionsMap({ sponsors, onSelectSponsor, onClose }: Pr
           zoomControl={false}
         >
           <TileLayer
-            attribution='&copy; <a href="https://carto.com/attributions">CARTO</a>'
-            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Tiles style by <a href="https://www.hotosm.org/" target="_blank">Humanitarian OpenStreetMap Team</a>'
+            url="https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png"
+            crossOrigin="anonymous"
             eventHandlers={{
-              tileloadstart: () => addLog('Carregando tiles do mapa (CartoDB Dark Matter)...'),
+              tileloadstart: () => addLog('Carregando tiles do mapa (OSM France HOT)...'),
               load: () => addLog('✓ Tiles do mapa carregados com sucesso'),
               tileerror: (e) => addLog(`✗ Erro ao carregar tile: ${e.type}`)
             }}

@@ -393,11 +393,12 @@ export default function PromotionsMap({ sponsors, onSelectSponsor, onClose }: Pr
           zoomControl={false}
         >
           <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Tiles style by <a href="https://www.hotosm.org/" target="_blank">Humanitarian OpenStreetMap Team</a>'
-            url="https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png"
-            crossOrigin="anonymous"
+            attribution='&copy; <a href="https://www.mapbox.com/">Mapbox</a>'
+            url="https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=pk.eyJ1Ijoid2lsbHp1YyIsImEiOiJjbWtoZzhqZHMwaTB2M2lwejNucndzNWkxIn0.YlulMtuiBVxDhNa3d9ALWw"
+            tileSize={512}
+            zoomOffset={-1}
             eventHandlers={{
-              tileloadstart: () => addLog('Carregando tiles do mapa (OSM France HOT)...'),
+              tileloadstart: () => addLog('Carregando tiles do mapa (Mapbox)...'),
               load: () => addLog('✓ Tiles do mapa carregados com sucesso'),
               tileerror: (e) => addLog(`✗ Erro ao carregar tile: ${e.type}`)
             }}

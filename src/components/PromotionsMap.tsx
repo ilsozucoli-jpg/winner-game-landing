@@ -385,11 +385,11 @@ export default function PromotionsMap({ sponsors, onSelectSponsor, onClose }: Pr
       </div>
 
       {/* Map */}
-      <div className="flex-1 relative" style={{ minHeight: '400px' }}>
+      <div className="flex-1 relative" style={{ height: '500px', width: '100%' }}>
         <MapContainer
           center={userPosition}
           zoom={14}
-          style={{ height: '100%', width: '100%' }}
+          style={{ height: '500px', width: '100%' }}
           zoomControl={false}
         >
           <TileLayer

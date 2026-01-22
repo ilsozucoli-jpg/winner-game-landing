@@ -1,48 +1,44 @@
 @tailwind base;
 
 /* Leaflet Map Styles */
+/* Leaflet Map Base Styles */
 .leaflet-container {
   font-family: inherit;
-  width: 100%;
-  height: 100%;
   z-index: 1;
-}
-
-.leaflet-tile-pane {
-  z-index: 1;
-}
-
-.leaflet-overlay-pane {
-  z-index: 2;
-}
-
-.leaflet-marker-pane {
-  z-index: 3;
-}
-
-.leaflet-popup-pane {
-  z-index: 4;
 }
 
 /* Leaflet marker reset - prevent zoom displacement */
-.leaflet-marker-icon {
-  background: none !important;
-  border: none !important;
-}
-
+.leaflet-marker-icon,
 .leaflet-div-icon {
   background: transparent !important;
   border: none !important;
+  margin: 0 !important;
 }
 
-/* Custom Leaflet popup styles */
+/* Custom popup styles */
 .leaflet-popup-content-wrapper {
   border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  padding: 0;
 }
 
 .leaflet-popup-content {
-  margin: 8px 12px;
+  margin: 0;
+}
+
+/* Pulsing animation for promotion markers */
+@keyframes pulse-marker {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+.pulse-marker {
+  animation: pulse-marker 2s ease-in-out infinite;
 }
 @tailwind components;
 @tailwind utilities;

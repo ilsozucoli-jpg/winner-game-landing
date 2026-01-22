@@ -1,27 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from 'react-leaflet';
-import L, { DivIcon, LatLngExpression } from 'leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import L from 'leaflet';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Slider } from '@/components/ui/slider';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { MapPin, Award, Clock, Phone, Loader2, Navigation, ZoomIn, ZoomOut, LocateFixed, ArrowLeft } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ArrowLeft, MapPin, Award, Clock, Loader2, Navigation, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import 'leaflet/dist/leaflet.css';
-
-// Fix for default marker icons in Leaflet with Vite
-import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
-import markerIcon from 'leaflet/dist/images/marker-icon.png';
-import markerShadow from 'leaflet/dist/images/marker-shadow.png';
-
-// @ts-ignore
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconUrl: markerIcon,
-  iconRetinaUrl: markerIcon2x,
-  shadowUrl: markerShadow,
-});
 
 interface Sponsor {
   id: string;
@@ -42,492 +27,323 @@ interface PromotionsMapProps {
   onClose: () => void;
 }
 
-// Component to recenter map
-function RecenterMap({ position }: { position: LatLngExpression }) {
+// Calculate distance between two coordinates in kilometers
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371; // Earth's radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+// Create pulsing green target icon for promotions (40x52px, anchor at bottom center)
+function createPromotionIcon(): L.DivIcon {
+  return L.divIcon({
+    className: '',
+    iconSize: [40, 52],
+    iconAnchor: [20, 52],
+    popupAnchor: [0, -52],
+    html: `
+      <div class="pulse-marker" style="width: 40px; height: 52px; display: flex; flex-direction: column; align-items: center;">
+        <div style="
+          width: 32px;
+          height: 32px;
+          background: linear-gradient(135deg, #22c55e, #16a34a);
+          border-radius: 50%;
+          border: 3px solid white;
+          box-shadow: 0 4px 12px rgba(34, 197, 94, 0.5);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        ">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
+            <circle cx="12" cy="12" r="10"/>
+            <circle cx="12" cy="12" r="6"/>
+            <circle cx="12" cy="12" r="2"/>
+          </svg>
+        </div>
+        <div style="
+          width: 0;
+          height: 0;
+          border-left: 8px solid transparent;
+          border-right: 8px solid transparent;
+          border-top: 12px solid #16a34a;
+          margin-top: -2px;
+        "></div>
+      </div>
+    `
+  });
+}
+
+// Create user location icon (18x18px, anchor at center)
+function createUserIcon(): L.DivIcon {
+  return L.divIcon({
+    className: '',
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
+    html: `
+      <div style="
+        width: 18px;
+        height: 18px;
+        background: #3b82f6;
+        border-radius: 50%;
+        border: 3px solid white;
+        box-shadow: 0 2px 8px rgba(59, 130, 246, 0.5);
+      "></div>
+    `
+  });
+}
+
+// Component to recenter map when user position changes
+function MapController({ center }: { center: [number, number] }) {
   const map = useMap();
+  
   useEffect(() => {
-    map.setView(position, map.getZoom());
-  }, [position, map]);
+    map.setView(center, map.getZoom());
+  }, [center, map]);
+  
   return null;
 }
 
-// Component for map controls
-function MapControls({ onLocate }: { onLocate: () => void }) {
-  const map = useMap();
-  
-  return (
-    <div className="absolute bottom-4 right-4 z-[1000] flex flex-col gap-2">
-      <Button 
-        size="icon" 
-        variant="secondary" 
-        className="h-10 w-10 shadow-lg"
-        onClick={() => map.zoomIn()}
-      >
-        <ZoomIn className="h-5 w-5" />
-      </Button>
-      <Button 
-        size="icon" 
-        variant="secondary" 
-        className="h-10 w-10 shadow-lg"
-        onClick={() => map.zoomOut()}
-      >
-        <ZoomOut className="h-5 w-5" />
-      </Button>
-      <Button 
-        size="icon" 
-        variant="secondary" 
-        className="h-10 w-10 shadow-lg"
-        onClick={onLocate}
-      >
-        <LocateFixed className="h-5 w-5" />
-      </Button>
-    </div>
-  );
-}
-
-// Create pulsing target marker - POI icon 40x52px with anchor at center-bottom
-const createPulsingIcon = () => {
-  return new DivIcon({
-    className: '',
-    html: `
-      <div style="width:40px;height:52px;display:flex;flex-direction:column;align-items:center;">
-        <div style="width:16px;height:16px;background:linear-gradient(135deg,hsl(142,76%,45%),hsl(142,76%,35%));border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);position:relative;">
-          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:6px;height:6px;background:white;border-radius:50%;"></div>
-        </div>
-        <div style="width:2px;height:30px;background:linear-gradient(to bottom,hsl(142,76%,45%),hsl(142,76%,35%));"></div>
-        <div style="width:8px;height:8px;background:hsl(142,76%,45%);border-radius:50%;opacity:0.5;"></div>
-      </div>
-    `,
-    iconSize: [40, 52],
-    iconAnchor: [20, 52],
-  });
-};
-
-// User location icon - 18x18px with anchor at center [9, 9]
-const userLocationIcon = new DivIcon({
-  className: '',
-  html: `
-    <div style="width:18px;height:18px;position:relative;display:flex;align-items:center;justify-content:center;">
-      <div style="width:12px;height:12px;background:hsl(217,91%,60%);border-radius:50%;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);z-index:2;"></div>
-      <div style="position:absolute;width:18px;height:18px;background:hsla(217,91%,60%,0.3);border-radius:50%;animation:userPulse 2s ease-out infinite;"></div>
-    </div>
-    <style>
-      @keyframes userPulse {
-        0% { transform: scale(1); opacity: 0.6; }
-        100% { transform: scale(2); opacity: 0; }
-      }
-    </style>
-  `,
-  iconSize: [18, 18],
-  iconAnchor: [9, 9],
-});
-
 export default function PromotionsMap({ sponsors, onSelectSponsor, onClose }: PromotionsMapProps) {
   const [userPosition, setUserPosition] = useState<[number, number] | null>(null);
+  const [geoError, setGeoError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [locationError, setLocationError] = useState<string | null>(null);
-  const [permissionState, setPermissionState] = useState<'prompt' | 'granted' | 'denied' | 'checking'>('checking');
-  const [radius, setRadius] = useState(2); // km
-  const [selectedPromotion, setSelectedPromotion] = useState<Sponsor | null>(null);
-  const [showDetails, setShowDetails] = useState(false);
-  const [debugLogs, setDebugLogs] = useState<string[]>([]);
-  const [showDebug, setShowDebug] = useState(true);
+  const [selectedSponsor, setSelectedSponsor] = useState<Sponsor | null>(null);
 
-  const addLog = (message: string) => {
-    const timestamp = new Date().toLocaleTimeString('pt-BR');
-    const logMessage = `[${timestamp}] ${message}`;
-    console.log('[PromotionsMap]', message);
-    setDebugLogs(prev => [...prev.slice(-9), logMessage]); // Keep last 10 logs
-  };
-
-  // Check permission state
-  const checkPermission = async () => {
-    addLog('Verificando permissões de geolocalização...');
-    
-    if (!navigator.permissions) {
-      addLog('API de permissões não suportada, usando fallback');
-      setPermissionState('prompt');
-      return;
-    }
-    
-    try {
-      const result = await navigator.permissions.query({ name: 'geolocation' });
-      addLog(`Estado da permissão: ${result.state}`);
-      setPermissionState(result.state as 'prompt' | 'granted' | 'denied');
-      
-      result.onchange = () => {
-        addLog(`Permissão alterada para: ${result.state}`);
-        setPermissionState(result.state as 'prompt' | 'granted' | 'denied');
-      };
-    } catch (err) {
-      addLog(`Erro ao verificar permissão: ${err}`);
-      setPermissionState('prompt');
-    }
-  };
-
-  // Request geolocation
-  const requestLocation = () => {
-    setLoading(true);
-    setLocationError(null);
-    addLog('Iniciando requisição de geolocalização...');
-    
+  // Request geolocation on mount
+  useEffect(() => {
     if (!navigator.geolocation) {
-      addLog('ERRO: Geolocalização não suportada');
-      setLocationError('Geolocalização não suportada pelo seu navegador');
+      setGeoError('Geolocalização não é suportada pelo seu navegador');
       setLoading(false);
       return;
     }
 
-    addLog('Solicitando posição atual ao navegador...');
-
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        const lat = position.coords.latitude;
-        const lng = position.coords.longitude;
-        addLog(`✓ Localização obtida: ${lat.toFixed(6)}, ${lng.toFixed(6)} (precisão: ${position.coords.accuracy}m)`);
-        setUserPosition([lat, lng]);
-        setPermissionState('granted');
+        setUserPosition([position.coords.latitude, position.coords.longitude]);
         setLoading(false);
       },
       (error) => {
-        addLog(`✗ ERRO de geolocalização: código ${error.code} - ${error.message}`);
         switch (error.code) {
           case error.PERMISSION_DENIED:
-            addLog('Permissão negada pelo usuário');
-            setLocationError('Permissão de localização negada. Por favor, habilite a localização nas configurações do seu navegador e tente novamente.');
-            setPermissionState('denied');
+            setGeoError('Permissão de localização negada. Ative a localização para ver promoções próximas.');
             break;
           case error.POSITION_UNAVAILABLE:
-            addLog('Posição indisponível');
-            setLocationError('Não foi possível obter sua localização. Verifique se o GPS está ativado.');
+            setGeoError('Informação de localização indisponível.');
             break;
           case error.TIMEOUT:
-            addLog('Timeout ao obter localização');
-            setLocationError('Tempo esgotado ao obter localização. Verifique sua conexão e tente novamente.');
+            setGeoError('Tempo esgotado ao obter localização.');
             break;
           default:
-            addLog('Erro desconhecido');
-            setLocationError('Erro desconhecido ao obter localização.');
+            setGeoError('Erro ao obter localização.');
         }
         setLoading(false);
       },
       {
         enableHighAccuracy: true,
-        timeout: 15000,
+        timeout: 10000,
         maximumAge: 0
       }
     );
-  };
-
-  useEffect(() => {
-    addLog('Componente PromotionsMap montado');
-    addLog(`Total de patrocinadores recebidos: ${sponsors.length}`);
-    const withCoords = sponsors.filter(s => s.latitude && s.longitude).length;
-    addLog(`Patrocinadores com coordenadas: ${withCoords}`);
-    checkPermission();
   }, []);
 
-  useEffect(() => {
-    if (permissionState !== 'checking') {
-      addLog(`Estado de permissão: ${permissionState}, iniciando requestLocation...`);
-      requestLocation();
-    }
-  }, [permissionState]);
-
-  // Filter sponsors with valid coordinates within radius
-  const sponsorsInRadius = useMemo(() => {
+  // Filter active promotions within 100km
+  const nearbyPromotions = useMemo(() => {
     if (!userPosition) return [];
     
+    const now = new Date();
     return sponsors.filter(sponsor => {
+      // Must have coordinates
       if (!sponsor.latitude || !sponsor.longitude) return false;
       
-      // Check if promotion is active
-      if (sponsor.promotion_end_date && new Date(sponsor.promotion_end_date) <= new Date()) {
-        return false;
-      }
+      // Must be active (not expired)
+      if (sponsor.promotion_end_date && new Date(sponsor.promotion_end_date) <= now) return false;
       
-      // Calculate distance using Haversine formula
-      const R = 6371; // Earth's radius in km
-      const dLat = (sponsor.latitude - userPosition[0]) * Math.PI / 180;
-      const dLon = (sponsor.longitude - userPosition[1]) * Math.PI / 180;
-      const a = 
-        Math.sin(dLat/2) * Math.sin(dLat/2) +
-        Math.cos(userPosition[0] * Math.PI / 180) * Math.cos(sponsor.latitude * Math.PI / 180) * 
-        Math.sin(dLon/2) * Math.sin(dLon/2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-      const distance = R * c;
-      
-      return distance <= radius;
+      // Must be within 100km
+      const distance = calculateDistance(
+        userPosition[0], userPosition[1],
+        sponsor.latitude, sponsor.longitude
+      );
+      return distance <= 100;
     });
-  }, [sponsors, userPosition, radius]);
+  }, [sponsors, userPosition]);
 
-  const handleMarkerClick = (sponsor: Sponsor) => {
-    setSelectedPromotion(sponsor);
-    setShowDetails(true);
-  };
+  const promotionIcon = useMemo(() => createPromotionIcon(), []);
+  const userIcon = useMemo(() => createUserIcon(), []);
 
-  const handlePlay = () => {
-    if (selectedPromotion) {
-      onSelectSponsor(selectedPromotion);
-    }
-  };
-
-  // Debug panel component
-  const DebugPanel = () => {
-    if (!showDebug || debugLogs.length === 0) return null;
-    
-    return (
-      <div className="fixed bottom-4 left-4 right-4 z-[1002] max-w-md">
-        <Card className="bg-black/90 border-primary/50">
-          <CardContent className="p-3">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-primary">🔍 Debug Logs</span>
-              <Button 
-                size="sm" 
-                variant="ghost" 
-                className="h-6 text-xs text-muted-foreground"
-                onClick={() => setShowDebug(false)}
-              >
-                Fechar
-              </Button>
-            </div>
-            <div className="space-y-1 max-h-40 overflow-y-auto">
-              {debugLogs.map((log, i) => (
-                <p 
-                  key={i} 
-                  className={`text-xs font-mono ${
-                    log.includes('ERRO') || log.includes('✗') 
-                      ? 'text-destructive' 
-                      : log.includes('✓') 
-                        ? 'text-green-400' 
-                        : 'text-muted-foreground'
-                  }`}
-                >
-                  {log}
-                </p>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  };
-
+  // Loading state
   if (loading) {
     return (
-      <div className="fixed inset-0 bg-background/95 z-50 flex items-center justify-center">
-        <Card className="max-w-md mx-4">
-          <CardContent className="p-6 text-center space-y-4">
-            <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto" />
-            <h3 className="text-lg font-semibold">Obtendo sua localização...</h3>
-            <p className="text-sm text-muted-foreground">
-              Permita o acesso à localização quando solicitado pelo navegador
-            </p>
-          </CardContent>
-        </Card>
-        <DebugPanel />
+      <div className="fixed inset-0 bg-background z-50 flex flex-col items-center justify-center gap-4">
+        <Loader2 className="w-12 h-12 animate-spin text-primary" />
+        <p className="text-muted-foreground">Obtendo sua localização...</p>
       </div>
     );
   }
 
-  if (locationError) {
+  // Error state
+  if (geoError || !userPosition) {
     return (
-      <div className="fixed inset-0 bg-background/95 z-50 flex items-center justify-center">
-        <Card className="max-w-md mx-4">
-          <CardContent className="p-6 text-center space-y-4">
-            <Navigation className="w-12 h-12 text-destructive mx-auto" />
-            <h3 className="text-lg font-semibold">Erro de Localização</h3>
-            <p className="text-sm text-muted-foreground">{locationError}</p>
-            <div className="flex gap-2 justify-center">
-              <Button onClick={requestLocation} variant="game">
-                Tentar Novamente
-              </Button>
-              <Button onClick={onClose} variant="outline">
+      <div className="fixed inset-0 bg-background z-50 flex flex-col items-center justify-center p-6">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-destructive">
+              <AlertCircle className="w-5 h-5" />
+              Localização Necessária
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-muted-foreground">
+              {geoError || 'Não foi possível obter sua localização.'}
+            </p>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={onClose} className="flex-1">
                 Voltar
+              </Button>
+              <Button 
+                onClick={() => window.location.reload()} 
+                className="flex-1"
+              >
+                Tentar Novamente
               </Button>
             </div>
           </CardContent>
         </Card>
-        <DebugPanel />
       </div>
     );
   }
-
-  if (!userPosition) return null;
 
   return (
     <div className="fixed inset-0 bg-background z-50 flex flex-col">
-      {/* Floating back button */}
-      <Button 
-        onClick={onClose} 
-        variant="secondary" 
-        size="icon"
-        className="fixed top-4 left-4 z-[1001] h-12 w-12 rounded-full shadow-lg"
-      >
-        <ArrowLeft className="h-6 w-6" />
-      </Button>
-
       {/* Header */}
-      <div className="p-4 bg-card border-b flex items-center justify-between pl-20">
-        <div>
-          <h2 className="text-lg font-bold">Mapa das Promoções</h2>
+      <div className="flex items-center gap-4 p-4 border-b bg-background">
+        <Button variant="ghost" size="icon" onClick={onClose}>
+          <ArrowLeft className="w-5 h-5" />
+        </Button>
+        <div className="flex-1">
+          <h2 className="font-semibold">Mapa das Promoções</h2>
           <p className="text-sm text-muted-foreground">
-            {sponsorsInRadius.length} promoções em {radius}km
+            {nearbyPromotions.length} promoções em até 100km
           </p>
         </div>
-      </div>
-
-      {/* Radius control */}
-      <div className="p-4 bg-card border-b">
-        <div className="flex items-center gap-4">
-          <span className="text-sm font-medium min-w-[80px]">Raio: {radius}km</span>
-          <Slider
-            value={[radius]}
-            onValueChange={(value) => setRadius(value[0])}
-            min={1}
-            max={50}
-            step={1}
-            className="flex-1"
-          />
+        <div className="flex items-center gap-1 text-sm text-primary">
+          <Navigation className="w-4 h-4" />
+          <span>Localização ativa</span>
         </div>
       </div>
 
-      {/* Map */}
-      <div className="flex-1 relative" style={{ minHeight: '400px' }}>
+      {/* Map Container */}
+      <div className="flex-1 relative">
         <MapContainer
           center={userPosition}
-          zoom={14}
-          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, height: '100%', width: '100%' }}
-          zoomControl={false}
+          zoom={12}
+          style={{ 
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0
+          }}
+          zoomControl={true}
         >
           <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            eventHandlers={{
-              tileloadstart: () => addLog('Carregando tiles do mapa (OpenStreetMap)...'),
-              load: () => addLog('✓ Tiles do mapa carregados com sucesso'),
-              tileerror: (e) => addLog(`✗ Erro ao carregar tile: ${e.type}`)
-            }}
           />
           
-          <RecenterMap position={userPosition} />
-          <MapControls onLocate={requestLocation} />
-
-          {/* User location marker */}
-          <Marker position={userPosition} icon={userLocationIcon}>
-            <Popup>Você está aqui</Popup>
+          <MapController center={userPosition} />
+          
+          {/* User marker */}
+          <Marker position={userPosition} icon={userIcon}>
+            <Popup>
+              <div className="text-center p-2">
+                <p className="font-semibold">Você está aqui</p>
+              </div>
+            </Popup>
           </Marker>
-
-          {/* Radius circle */}
-          <Circle
-            center={userPosition}
-            radius={radius * 1000}
-            pathOptions={{
-              color: 'hsl(var(--primary))',
-              fillColor: 'hsl(var(--primary))',
-              fillOpacity: 0.1,
-              weight: 2,
-            }}
-          />
-
-          {/* Sponsor markers */}
-          {sponsorsInRadius.map((sponsor) => (
+          
+          {/* Promotion markers */}
+          {nearbyPromotions.map((sponsor) => (
             <Marker
               key={sponsor.id}
               position={[sponsor.latitude!, sponsor.longitude!]}
-              icon={createPulsingIcon()}
+              icon={promotionIcon}
               eventHandlers={{
-                click: () => handleMarkerClick(sponsor),
+                click: () => setSelectedSponsor(sponsor)
               }}
-            >
-              <Popup>
-                <div className="text-center p-1">
-                  <strong>{sponsor.name}</strong>
-                  <br />
-                  <span className="text-xs">{sponsor.prize_description}</span>
-                </div>
-              </Popup>
-            </Marker>
+            />
           ))}
         </MapContainer>
-
-        {/* Legend */}
-        <div className="absolute top-4 left-4 z-[1000] bg-card/90 backdrop-blur rounded-lg p-3 shadow-lg">
-          <div className="flex items-center gap-2 text-xs">
-            <div className="w-3 h-3 rounded-full bg-primary animate-pulse" />
-            <span>Promoção ativa</span>
-          </div>
-          <div className="flex items-center gap-2 text-xs mt-1">
-            <div className="w-3 h-3 rounded-full bg-blue-500" />
-            <span>Sua localização</span>
-          </div>
-        </div>
       </div>
 
-      {/* Promotion details dialog */}
-      <Dialog open={showDetails} onOpenChange={setShowDetails}>
-        <DialogContent className="max-w-md">
-          {selectedPromotion && (
-            <>
-              <DialogHeader>
-                <div className="w-full h-24 bg-muted rounded-lg flex items-center justify-center overflow-hidden mb-2">
-                  <img 
-                    src={selectedPromotion.logo_url} 
-                    alt={selectedPromotion.name}
+      {/* Selected promotion banner */}
+      {selectedSponsor && (
+        <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background via-background to-transparent pt-12">
+          <Card className="shadow-lg">
+            <CardContent className="p-4">
+              <div className="flex gap-4">
+                {/* Logo */}
+                <div className="w-20 h-20 rounded-lg bg-muted flex-shrink-0 overflow-hidden">
+                  <img
+                    src={selectedSponsor.logo_url}
+                    alt={selectedSponsor.name}
                     className="w-full h-full object-contain"
                   />
                 </div>
-                <DialogTitle className="text-xl">{selectedPromotion.name}</DialogTitle>
-                <DialogDescription className="sr-only">
-                  Detalhes da promoção
-                </DialogDescription>
-              </DialogHeader>
-              
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <MapPin className="w-4 h-4 text-primary" />
-                  <span>{selectedPromotion.city}</span>
-                </div>
                 
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Phone className="w-4 h-4 text-primary" />
-                  <span>{selectedPromotion.phone}</span>
-                </div>
-                
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Award className="w-4 h-4 text-primary" />
-                  <span>{selectedPromotion.prize_count} {selectedPromotion.prize_count === 1 ? 'prêmio' : 'prêmios'}</span>
-                </div>
-                
-                {selectedPromotion.promotion_end_date && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Clock className="w-4 h-4 text-primary" />
-                    <span>Até {format(new Date(selectedPromotion.promotion_end_date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-bold text-lg truncate">{selectedSponsor.name}</h3>
+                  
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
+                    <MapPin className="w-3 h-3 flex-shrink-0" />
+                    <span className="truncate">{selectedSponsor.city}</span>
                   </div>
-                )}
-                
-                <div className="pt-2 border-t border-border">
-                  <p className="text-sm text-foreground font-medium">
-                    {selectedPromotion.prize_description}
+                  
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                    <Award className="w-3 h-3 flex-shrink-0" />
+                    <span>{selectedSponsor.prize_count} {selectedSponsor.prize_count === 1 ? 'prêmio' : 'prêmios'}</span>
+                  </div>
+                  
+                  {selectedSponsor.promotion_end_date && (
+                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                      <Clock className="w-3 h-3 flex-shrink-0" />
+                      <span>Até {format(new Date(selectedSponsor.promotion_end_date), "dd/MM 'às' HH:mm", { locale: ptBR })}</span>
+                    </div>
+                  )}
+                  
+                  <p className="text-sm font-medium mt-2 line-clamp-2">
+                    {selectedSponsor.prize_description}
                   </p>
                 </div>
-                
-                <div className="flex gap-2 pt-4">
-                  <Button variant="game" className="flex-1" onClick={handlePlay}>
-                    Jogar
-                  </Button>
-                  <Button variant="outline" className="flex-1" onClick={() => setShowDetails(false)}>
-                    Voltar ao Mapa
-                  </Button>
-                </div>
               </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Debug panel on map view */}
-      <DebugPanel />
+              
+              {/* Actions */}
+              <div className="flex gap-2 mt-4">
+                <Button 
+                  variant="outline" 
+                  className="flex-1"
+                  onClick={() => setSelectedSponsor(null)}
+                >
+                  Fechar
+                </Button>
+                <Button 
+                  variant="game" 
+                  className="flex-1"
+                  onClick={() => onSelectSponsor(selectedSponsor)}
+                >
+                  Jogar Agora
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

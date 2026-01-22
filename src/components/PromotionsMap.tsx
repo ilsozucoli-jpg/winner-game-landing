@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -41,73 +41,58 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
 }
 
 // Create pulsing green target icon for promotions (40x52px, anchor at bottom center)
-function createPromotionIcon(): L.DivIcon {
-  return L.divIcon({
-    className: '',
-    iconSize: [40, 52],
-    iconAnchor: [20, 52],
-    popupAnchor: [0, -52],
-    html: `
-      <div class="pulse-marker" style="width: 40px; height: 52px; display: flex; flex-direction: column; align-items: center;">
-        <div style="
-          width: 32px;
-          height: 32px;
-          background: linear-gradient(135deg, #22c55e, #16a34a);
-          border-radius: 50%;
-          border: 3px solid white;
-          box-shadow: 0 4px 12px rgba(34, 197, 94, 0.5);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        ">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
-            <circle cx="12" cy="12" r="10"/>
-            <circle cx="12" cy="12" r="6"/>
-            <circle cx="12" cy="12" r="2"/>
-          </svg>
-        </div>
-        <div style="
-          width: 0;
-          height: 0;
-          border-left: 8px solid transparent;
-          border-right: 8px solid transparent;
-          border-top: 12px solid #16a34a;
-          margin-top: -2px;
-        "></div>
-      </div>
-    `
-  });
-}
-
-// Create user location icon (18x18px, anchor at center)
-function createUserIcon(): L.DivIcon {
-  return L.divIcon({
-    className: '',
-    iconSize: [18, 18],
-    iconAnchor: [9, 9],
-    html: `
+const promotionIcon = L.divIcon({
+  className: '',
+  iconSize: [40, 52],
+  iconAnchor: [20, 52],
+  popupAnchor: [0, -52],
+  html: `
+    <div class="pulse-marker" style="width: 40px; height: 52px; display: flex; flex-direction: column; align-items: center;">
       <div style="
-        width: 18px;
-        height: 18px;
-        background: #3b82f6;
+        width: 32px;
+        height: 32px;
+        background: linear-gradient(135deg, #22c55e, #16a34a);
         border-radius: 50%;
         border: 3px solid white;
-        box-shadow: 0 2px 8px rgba(59, 130, 246, 0.5);
+        box-shadow: 0 4px 12px rgba(34, 197, 94, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      ">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
+          <circle cx="12" cy="12" r="10"/>
+          <circle cx="12" cy="12" r="6"/>
+          <circle cx="12" cy="12" r="2"/>
+        </svg>
+      </div>
+      <div style="
+        width: 0;
+        height: 0;
+        border-left: 8px solid transparent;
+        border-right: 8px solid transparent;
+        border-top: 12px solid #16a34a;
+        margin-top: -2px;
       "></div>
-    `
-  });
-}
+    </div>
+  `
+});
 
-// Component to recenter map when user position changes
-function MapController({ center }: { center: [number, number] }) {
-  const map = useMap();
-  
-  useEffect(() => {
-    map.setView(center, map.getZoom());
-  }, [center, map]);
-  
-  return null;
-}
+// Create user location icon (18x18px, anchor at center)
+const userIcon = L.divIcon({
+  className: '',
+  iconSize: [18, 18],
+  iconAnchor: [9, 9],
+  html: `
+    <div style="
+      width: 18px;
+      height: 18px;
+      background: #3b82f6;
+      border-radius: 50%;
+      border: 3px solid white;
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.5);
+    "></div>
+  `
+});
 
 export default function PromotionsMap({ sponsors, onSelectSponsor, onClose }: PromotionsMapProps) {
   const [userPosition, setUserPosition] = useState<[number, number] | null>(null);
@@ -172,9 +157,6 @@ export default function PromotionsMap({ sponsors, onSelectSponsor, onClose }: Pr
       return distance <= 100;
     });
   }, [sponsors, userPosition]);
-
-  const promotionIcon = useMemo(() => createPromotionIcon(), []);
-  const userIcon = useMemo(() => createUserIcon(), []);
 
   // Loading state
   if (loading) {
@@ -255,8 +237,6 @@ export default function PromotionsMap({ sponsors, onSelectSponsor, onClose }: Pr
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          
-          <MapController center={userPosition} />
           
           {/* User marker */}
           <Marker position={userPosition} icon={userIcon}>

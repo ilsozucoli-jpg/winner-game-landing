@@ -85,33 +85,41 @@ function MapControls({ onLocate }: { onLocate: () => void }) {
   );
 }
 
-// Create pulsing target marker
+// Create pulsing target marker - POI icon 40x52px with anchor at center-bottom
 const createPulsingIcon = () => {
   return new DivIcon({
-    className: 'custom-pulsing-marker',
+    className: '',
     html: `
-      <div class="pulsing-target">
-        <div class="pulsing-target-core"></div>
-        <div class="pulsing-target-ring"></div>
-        <div class="pulsing-target-ring delay-1"></div>
+      <div style="width:40px;height:52px;display:flex;flex-direction:column;align-items:center;">
+        <div style="width:16px;height:16px;background:linear-gradient(135deg,hsl(142,76%,45%),hsl(142,76%,35%));border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);position:relative;">
+          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:6px;height:6px;background:white;border-radius:50%;"></div>
+        </div>
+        <div style="width:2px;height:30px;background:linear-gradient(to bottom,hsl(142,76%,45%),hsl(142,76%,35%));"></div>
+        <div style="width:8px;height:8px;background:hsl(142,76%,45%);border-radius:50%;opacity:0.5;"></div>
       </div>
     `,
-    iconSize: [40, 40],
-    iconAnchor: [20, 20],
+    iconSize: [40, 52],
+    iconAnchor: [20, 52],
   });
 };
 
-// User location icon
+// User location icon - 18x18px with anchor at center [9, 9]
 const userLocationIcon = new DivIcon({
-  className: 'user-location-marker',
+  className: '',
   html: `
-    <div class="user-location">
-      <div class="user-location-dot"></div>
-      <div class="user-location-pulse"></div>
+    <div style="width:18px;height:18px;position:relative;display:flex;align-items:center;justify-content:center;">
+      <div style="width:12px;height:12px;background:hsl(217,91%,60%);border-radius:50%;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);z-index:2;"></div>
+      <div style="position:absolute;width:18px;height:18px;background:hsla(217,91%,60%,0.3);border-radius:50%;animation:userPulse 2s ease-out infinite;"></div>
     </div>
+    <style>
+      @keyframes userPulse {
+        0% { transform: scale(1); opacity: 0.6; }
+        100% { transform: scale(2); opacity: 0; }
+      }
+    </style>
   `,
-  iconSize: [24, 24],
-  iconAnchor: [12, 12],
+  iconSize: [18, 18],
+  iconAnchor: [9, 9],
 });
 
 export default function PromotionsMap({ sponsors, onSelectSponsor, onClose }: PromotionsMapProps) {
@@ -393,10 +401,10 @@ export default function PromotionsMap({ sponsors, onSelectSponsor, onClose }: Pr
           zoomControl={false}
         >
           <TileLayer
-            attribution='&copy; <a href="https://www.mapbox.com/">Mapbox</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            url="https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/256/{z}/{x}/{y}@2x?access_token=pk.eyJ1Ijoid2lsbHp1YyIsImEiOiJjbWtoZzhqZHMwaTB2M2lwejNucndzNWkxIn0.YlulMtuiBVxDhNa3d9ALWw"
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             eventHandlers={{
-              tileloadstart: () => addLog('Carregando tiles do mapa (Mapbox)...'),
+              tileloadstart: () => addLog('Carregando tiles do mapa (OpenStreetMap)...'),
               load: () => addLog('✓ Tiles do mapa carregados com sucesso'),
               tileerror: (e) => addLog(`✗ Erro ao carregar tile: ${e.type}`)
             }}

@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, MapPin, Award, Clock, Loader2, Navigation, AlertCircle } from 'lucide-react';
+import { ArrowLeft, MapPin, Award, Clock, Loader2, Navigation, AlertCircle, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import 'leaflet/dist/leaflet.css';
@@ -12,6 +12,7 @@ interface Sponsor {
   id: string;
   name: string;
   city: string;
+  state?: string;
   logo_url: string;
   prize_description: string;
   phone: string;
@@ -27,7 +28,9 @@ interface PromotionsMapProps {
   onClose: () => void;
 }
 
-// Calculate distance between two coordinates in kilometers
+const SEARCH_RADIUS_KM = 50;
+
+// Calculate distance between two coordinates in kilometers (Haversine formula)
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371; // Earth's radius in km
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -137,7 +140,7 @@ export default function PromotionsMap({ sponsors, onSelectSponsor, onClose }: Pr
     );
   }, []);
 
-  // Filter active promotions within 100km
+  // Filter active promotions within search radius
   const nearbyPromotions = useMemo(() => {
     if (!userPosition) return [];
     
@@ -149,14 +152,32 @@ export default function PromotionsMap({ sponsors, onSelectSponsor, onClose }: Pr
       // Must be active (not expired)
       if (sponsor.promotion_end_date && new Date(sponsor.promotion_end_date) <= now) return false;
       
-      // Must be within 100km
+      // Must be within search radius
       const distance = calculateDistance(
         userPosition[0], userPosition[1],
         sponsor.latitude, sponsor.longitude
       );
-      return distance <= 100;
+      return distance <= SEARCH_RADIUS_KM;
     });
   }, [sponsors, userPosition]);
+
+  // Open Google Maps with directions
+  const openGoogleMapsDirections = (sponsor: Sponsor) => {
+    if (!sponsor.latitude || !sponsor.longitude || !userPosition) return;
+    
+    const origin = `${userPosition[0]},${userPosition[1]}`;
+    const destination = `${sponsor.latitude},${sponsor.longitude}`;
+    const url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving`;
+    
+    window.open(url, '_blank');
+  };
+
+  // Get formatted address
+  const getFormattedAddress = (sponsor: Sponsor) => {
+    const parts = [sponsor.city];
+    if (sponsor.state) parts.push(sponsor.state);
+    return parts.join(', ');
+  };
 
   // Loading state
   if (loading) {
@@ -210,7 +231,7 @@ export default function PromotionsMap({ sponsors, onSelectSponsor, onClose }: Pr
         <div className="flex-1">
           <h2 className="font-semibold">Mapa das Promoções</h2>
           <p className="text-sm text-muted-foreground">
-            {nearbyPromotions.length} promoções em até 100km
+            {nearbyPromotions.length} promoções em até {SEARCH_RADIUS_KM}km
           </p>
         </div>
         <div className="flex items-center gap-1 text-sm text-primary">
@@ -282,7 +303,7 @@ export default function PromotionsMap({ sponsors, onSelectSponsor, onClose }: Pr
                   
                   <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
                     <MapPin className="w-3 h-3 flex-shrink-0" />
-                    <span className="truncate">{selectedSponsor.city}</span>
+                    <span className="truncate">{getFormattedAddress(selectedSponsor)}</span>
                   </div>
                   
                   <div className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -307,13 +328,23 @@ export default function PromotionsMap({ sponsors, onSelectSponsor, onClose }: Pr
               <div className="flex gap-2 mt-4">
                 <Button 
                   variant="outline" 
-                  className="flex-1"
+                  size="sm"
                   onClick={() => setSelectedSponsor(null)}
                 >
                   Fechar
                 </Button>
                 <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="gap-1"
+                  onClick={() => openGoogleMapsDirections(selectedSponsor)}
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  Rota
+                </Button>
+                <Button 
                   variant="game" 
+                  size="sm"
                   className="flex-1"
                   onClick={() => onSelectSponsor(selectedSponsor)}
                 >

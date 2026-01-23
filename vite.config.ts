@@ -18,9 +18,4 @@ export default defineConfig(({ mode }) => ({
   optimizeDeps: {
     include: ['react-leaflet', 'leaflet', '@react-leaflet/core'],
   },
-  build: {
-    commonjsOptions: {
-      include: [/leaflet/, /react-leaflet/, /@react-leaflet/],
-    },
-  },
 }));

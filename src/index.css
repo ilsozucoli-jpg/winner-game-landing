@@ -29,16 +29,40 @@
 @keyframes pulse-marker {
   0%, 100% {
     transform: scale(1);
-    opacity: 1;
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
   }
   50% {
-    transform: scale(1.1);
-    opacity: 0.8;
+    transform: scale(1.08);
+    box-shadow: 0 0 0 12px rgba(34, 197, 94, 0);
   }
 }
 
 .pulse-marker {
-  animation: pulse-marker 2s ease-in-out infinite;
+  animation: pulse-marker 1.5s ease-in-out infinite;
+}
+
+/* Outer glow ring for pulse effect */
+.pulse-marker::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 4px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(34, 197, 94, 0.3);
+  animation: pulse-ring 1.5s ease-out infinite;
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
 }
 @tailwind components;
 @tailwind utilities;

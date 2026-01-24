@@ -10,11 +10,15 @@ interface Sponsor {
   id: string;
   name: string;
   city: string;
+  state?: string;
   logo_url: string;
   prize_description: string;
   phone: string;
   prize_count: number;
   promotion_end_date?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  address?: string | null;
 }
 
 interface GameContextType {

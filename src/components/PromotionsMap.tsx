@@ -20,6 +20,7 @@ interface Sponsor {
   promotion_end_date?: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  address?: string | null;
 }
 
 interface PromotionsMapProps {
@@ -172,11 +173,13 @@ export default function PromotionsMap({ sponsors, onSelectSponsor, onClose }: Pr
     window.open(url, '_blank');
   };
 
-  // Get formatted address
+  // Get formatted address (full address if available)
   const getFormattedAddress = (sponsor: Sponsor) => {
-    const parts = [sponsor.city];
+    const parts: string[] = [];
+    if (sponsor.address) parts.push(sponsor.address);
+    if (sponsor.city) parts.push(sponsor.city);
     if (sponsor.state) parts.push(sponsor.state);
-    return parts.join(', ');
+    return parts.length > 0 ? parts.join(', ') : 'Endereço não disponível';
   };
 
   // Loading state
@@ -282,10 +285,13 @@ export default function PromotionsMap({ sponsors, onSelectSponsor, onClose }: Pr
         </MapContainer>
       </div>
 
-      {/* Selected promotion banner */}
+      {/* Selected promotion banner - clickable to start game */}
       {selectedSponsor && (
         <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background via-background to-transparent pt-12">
-          <Card className="shadow-lg">
+          <Card 
+            className="shadow-lg cursor-pointer hover:shadow-xl transition-shadow"
+            onClick={() => onSelectSponsor(selectedSponsor)}
+          >
             <CardContent className="p-4">
               <div className="flex gap-4">
                 {/* Logo */}
@@ -301,9 +307,9 @@ export default function PromotionsMap({ sponsors, onSelectSponsor, onClose }: Pr
                 <div className="flex-1 min-w-0">
                   <h3 className="font-bold text-lg truncate">{selectedSponsor.name}</h3>
                   
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-                    <MapPin className="w-3 h-3 flex-shrink-0" />
-                    <span className="truncate">{getFormattedAddress(selectedSponsor)}</span>
+                  <div className="flex items-start gap-1 text-sm text-muted-foreground mt-1">
+                    <MapPin className="w-3 h-3 flex-shrink-0 mt-0.5" />
+                    <span className="line-clamp-2">{getFormattedAddress(selectedSponsor)}</span>
                   </div>
                   
                   <div className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -324,12 +330,15 @@ export default function PromotionsMap({ sponsors, onSelectSponsor, onClose }: Pr
                 </div>
               </div>
               
-              {/* Actions */}
+              {/* Actions - stop propagation to prevent card click */}
               <div className="flex gap-2 mt-4">
                 <Button 
                   variant="outline" 
                   size="sm"
-                  onClick={() => setSelectedSponsor(null)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedSponsor(null);
+                  }}
                 >
                   Fechar
                 </Button>
@@ -337,7 +346,10 @@ export default function PromotionsMap({ sponsors, onSelectSponsor, onClose }: Pr
                   variant="outline" 
                   size="sm"
                   className="gap-1"
-                  onClick={() => openGoogleMapsDirections(selectedSponsor)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openGoogleMapsDirections(selectedSponsor);
+                  }}
                 >
                   <ExternalLink className="w-4 h-4" />
                   Rota
@@ -346,7 +358,10 @@ export default function PromotionsMap({ sponsors, onSelectSponsor, onClose }: Pr
                   variant="game" 
                   size="sm"
                   className="flex-1"
-                  onClick={() => onSelectSponsor(selectedSponsor)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSelectSponsor(selectedSponsor);
+                  }}
                 >
                   Jogar Agora
                 </Button>

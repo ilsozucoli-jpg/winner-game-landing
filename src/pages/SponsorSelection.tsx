@@ -18,6 +18,7 @@ interface Sponsor {
   id: string;
   name: string;
   city: string;
+  state?: string;
   logo_url: string;
   prize_description: string;
   phone: string;
@@ -25,6 +26,7 @@ interface Sponsor {
   promotion_end_date?: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  address?: string | null;
 }
 
 const ITEMS_PER_PAGE = 10;
@@ -80,9 +82,15 @@ export default function SponsorSelection() {
 
   const loadSponsors = async () => {
     try {
+      // Fetch sponsors with address from sponsor_registrations
       const { data, error } = await supabase
         .from('sponsors')
-        .select('*')
+        .select(`
+          *,
+          sponsor_registrations (
+            address
+          )
+        `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -92,13 +100,15 @@ export default function SponsorSelection() {
         id: s.id,
         name: s.name || '',
         city: s.city || '',
+        state: s.state || '',
         logo_url: s.logo_url,
         prize_description: s.prize_description,
         phone: s.phone,
         prize_count: s.prize_count || 1,
         promotion_end_date: s.promotion_end_date,
         latitude: s.latitude,
-        longitude: s.longitude
+        longitude: s.longitude,
+        address: s.sponsor_registrations?.address || null
       }));
       
       // Separar patrocinadores ativos e expirados

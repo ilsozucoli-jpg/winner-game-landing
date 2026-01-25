@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, UserPlus, Trash2 } from 'lucide-react';
+import { Loader2, UserPlus, Trash2, MapPin } from 'lucide-react';
 import { createAdminUser } from '@/lib/adminUtils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -69,6 +69,11 @@ export default function AdminPanel() {
   const [registrationsStatusFilter, setRegistrationsStatusFilter] = useState<'all' | 'approved' | 'pending' | 'rejected'>('all');
   const [registrationsCityFilter, setRegistrationsCityFilter] = useState('');
   const [registrationsCurrentPage, setRegistrationsCurrentPage] = useState(1);
+  const [editingAddress, setEditingAddress] = useState(false);
+  const [newAddress, setNewAddress] = useState('');
+  const [newCity, setNewCity] = useState('');
+  const [newState, setNewState] = useState('');
+  const [geocodingAddress, setGeocodingAddress] = useState(false);
 
   useEffect(() => {
     checkAdminStatus();
@@ -1717,6 +1722,7 @@ export default function AdminPanel() {
                               <TableHeader>
                                 <TableRow>
                                   <TableHead>Nome</TableHead>
+                                  <TableHead>Empresa</TableHead>
                                   <TableHead>Endereço</TableHead>
                                   <TableHead>Cidade</TableHead>
                                   <TableHead>UF</TableHead>
@@ -1728,7 +1734,8 @@ export default function AdminPanel() {
                                 {paginatedRegistrations.map((registration: any) => (
                                   <TableRow key={registration.id}>
                                     <TableCell className="font-medium">{registration.name}</TableCell>
-                                    <TableCell>{registration.address}</TableCell>
+                                    <TableCell>{registration.company}</TableCell>
+                                    <TableCell className="max-w-[200px] truncate" title={registration.address}>{registration.address}</TableCell>
                                     <TableCell>{registration.city}</TableCell>
                                     <TableCell>{registration.state}</TableCell>
                                     <TableCell>
@@ -1788,8 +1795,16 @@ export default function AdminPanel() {
               </CardContent>
             </Card>
 
-            <Dialog open={!!selectedRegistration} onOpenChange={(open) => !open && setSelectedRegistration(null)}>
-              <DialogContent className="max-w-2xl">
+            <Dialog open={!!selectedRegistration} onOpenChange={(open) => {
+              if (!open) {
+                setSelectedRegistration(null);
+                setEditingAddress(false);
+                setNewAddress('');
+                setNewCity('');
+                setNewState('');
+              }
+            }}>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Detalhes do Cadastro</DialogTitle>
                   <DialogDescription>
@@ -1831,9 +1846,164 @@ export default function AdminPanel() {
                       </div>
                     </div>
 
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Endereço Completo</label>
-                      <p className="text-foreground">{selectedRegistration.address}</p>
+                    <div className="border-t pt-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="text-sm font-medium text-muted-foreground">Endereço Completo</label>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            if (editingAddress) {
+                              setEditingAddress(false);
+                              setNewAddress('');
+                              setNewCity('');
+                              setNewState('');
+                            } else {
+                              setEditingAddress(true);
+                              setNewAddress(selectedRegistration.address || '');
+                              setNewCity(selectedRegistration.city || '');
+                              setNewState(selectedRegistration.state || '');
+                            }
+                          }}
+                        >
+                          {editingAddress ? 'Cancelar' : 'Editar Endereço'}
+                        </Button>
+                      </div>
+                      
+                      {editingAddress ? (
+                        <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
+                          <div>
+                            <Label className="text-xs">Endereço</Label>
+                            <Input
+                              value={newAddress}
+                              onChange={(e) => setNewAddress(e.target.value)}
+                              placeholder="Rua, número, bairro..."
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <Label className="text-xs">Cidade</Label>
+                              <Input
+                                value={newCity}
+                                onChange={(e) => setNewCity(e.target.value)}
+                                placeholder="Cidade"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-xs">Estado</Label>
+                              <Input
+                                value={newState}
+                                onChange={(e) => setNewState(e.target.value)}
+                                placeholder="UF"
+                                maxLength={2}
+                              />
+                            </div>
+                          </div>
+                          <Button
+                            className="w-full"
+                            onClick={async () => {
+                              if (!newAddress || !newCity || !newState) {
+                                toast({
+                                  title: "Erro",
+                                  description: "Preencha todos os campos de endereço.",
+                                  variant: "destructive",
+                                });
+                                return;
+                              }
+
+                              setGeocodingAddress(true);
+                              try {
+                                // Geocodificar o novo endereço
+                                const fullAddress = `${newAddress}, ${newCity}, ${newState}, Brasil`;
+                                const response = await supabase.functions.invoke('geocode-address', {
+                                  body: { address: fullAddress }
+                                });
+
+                                let latitude = null;
+                                let longitude = null;
+
+                                if (response.data?.lat && response.data?.lon) {
+                                  latitude = response.data.lat;
+                                  longitude = response.data.lon;
+                                }
+
+                                // Atualizar o registro
+                                const { error } = await supabase
+                                  .from('sponsor_registrations')
+                                  .update({
+                                    address: newAddress,
+                                    city: newCity,
+                                    state: newState.toUpperCase(),
+                                    latitude,
+                                    longitude,
+                                  })
+                                  .eq('id', selectedRegistration.id);
+
+                                if (error) throw error;
+
+                                toast({
+                                  title: "Sucesso!",
+                                  description: latitude 
+                                    ? "Endereço atualizado com geolocalização." 
+                                    : "Endereço atualizado (geolocalização não encontrada).",
+                                });
+
+                                // Atualizar o estado local
+                                setSelectedRegistration({
+                                  ...selectedRegistration,
+                                  address: newAddress,
+                                  city: newCity,
+                                  state: newState.toUpperCase(),
+                                  latitude,
+                                  longitude,
+                                });
+                                setEditingAddress(false);
+                                loadSponsorRegistrations();
+                              } catch (error: any) {
+                                toast({
+                                  title: "Erro",
+                                  description: error.message,
+                                  variant: "destructive",
+                                });
+                              } finally {
+                                setGeocodingAddress(false);
+                              }
+                            }}
+                            disabled={geocodingAddress}
+                          >
+                            {geocodingAddress ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Geocodificando...
+                              </>
+                            ) : (
+                              <>
+                                <MapPin className="mr-2 h-4 w-4" />
+                                Salvar e Geocodificar
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      ) : (
+                        <div>
+                          <p className="text-foreground">{selectedRegistration.address}</p>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {selectedRegistration.city} - {selectedRegistration.state}
+                          </p>
+                          {selectedRegistration.latitude && selectedRegistration.longitude && (
+                            <p className="text-xs text-green-500 mt-1">
+                              <MapPin className="inline h-3 w-3 mr-1" />
+                              Geolocalização: {selectedRegistration.latitude.toFixed(4)}, {selectedRegistration.longitude.toFixed(4)}
+                            </p>
+                          )}
+                          {!selectedRegistration.latitude && !selectedRegistration.longitude && (
+                            <p className="text-xs text-yellow-500 mt-1">
+                              <MapPin className="inline h-3 w-3 mr-1" />
+                              Sem geolocalização
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">

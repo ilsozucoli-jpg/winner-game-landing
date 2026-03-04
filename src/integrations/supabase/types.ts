@@ -66,6 +66,7 @@ export type Database = {
       }
       pending_promotions: {
         Row: {
+          ai_validation_notes: string | null
           city: string | null
           created_at: string
           id: string
@@ -84,6 +85,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          ai_validation_notes?: string | null
           city?: string | null
           created_at?: string
           id?: string
@@ -102,6 +104,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          ai_validation_notes?: string | null
           city?: string | null
           created_at?: string
           id?: string

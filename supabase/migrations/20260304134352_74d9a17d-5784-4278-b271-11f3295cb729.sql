@@ -1,0 +1,1 @@
+ALTER TABLE public.pending_promotions ADD COLUMN ai_validation_notes text DEFAULT NULL;

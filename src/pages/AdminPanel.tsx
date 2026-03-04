@@ -5,13 +5,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, UserPlus, Trash2, MapPin } from 'lucide-react';
+import { Loader2, UserPlus, Trash2, MapPin, Shield } from 'lucide-react';
 import { createAdminUser } from '@/lib/adminUtils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Settings, Users, UserX, Key, List, Zap, Store, CheckCircle, XCircle, Cog } from 'lucide-react';
 import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function AdminPanel() {
   const navigate = useNavigate();
@@ -1042,6 +1043,17 @@ export default function AdminPanel() {
                               <p className="text-xs text-muted-foreground">
                                 Término: {new Date(promotion.promotion_end_date).toLocaleDateString('pt-BR')}
                               </p>
+                            )}
+                            {promotion.ai_validation_notes && (
+                              <Alert className="mt-2 bg-amber-50 dark:bg-amber-950/30 border-amber-500">
+                                <Shield className="h-4 w-4 text-amber-600" />
+                                <AlertDescription className="text-amber-800 dark:text-amber-200 text-xs">
+                                  <p className="font-semibold">⚠ Conteúdo reprovado pela IA:</p>
+                                  {promotion.ai_validation_notes.split('\n').map((note: string, i: number) => (
+                                    <p key={i}>{note}</p>
+                                  ))}
+                                </AlertDescription>
+                              </Alert>
                             )}
                             <p className="text-xs text-muted-foreground">
                               Criado em: {new Date(promotion.created_at).toLocaleDateString('pt-BR')}

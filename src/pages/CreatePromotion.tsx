@@ -52,6 +52,10 @@ export default function CreatePromotion() {
   const [logoValidation, setLogoValidation] = useState<ValidationResult | null>(null);
   const [validatingText, setValidatingText] = useState(false);
   const [textValidation, setTextValidation] = useState<ValidationResult | null>(null);
+  const [logoOverridden, setLogoOverridden] = useState(false);
+  const [textOverridden, setTextOverridden] = useState(false);
+  const [showLogoOverrideConfirm, setShowLogoOverrideConfirm] = useState(false);
+  const [showTextOverrideConfirm, setShowTextOverrideConfirm] = useState(false);
   
   // Geocoding states
   const [geocoding, setGeocoding] = useState(false);
@@ -201,16 +205,14 @@ export default function CreatePromotion() {
         const result = await validateContent(base64Image, null, 'logo');
         setLogoValidation(result);
         setValidatingLogo(false);
+        setLogoOverridden(false);
         
         if (!result.approved) {
           toast({
-            title: "Logo não aprovado",
+            title: "Logo não aprovado pela IA",
             description: result.reason,
             variant: "destructive",
           });
-          // Clear the file if not approved
-          setLogoFile(null);
-          setLogoPreview(null);
         } else {
           toast({
             title: "Logo aprovado",
@@ -235,10 +237,11 @@ export default function CreatePromotion() {
     const result = await validateContent(null, formData.prize_description, 'promotion_text');
     setTextValidation(result);
     setValidatingText(false);
+    setTextOverridden(false);
     
     if (!result.approved) {
       toast({
-        title: "Descrição não aprovada",
+        title: "Descrição não aprovada pela IA",
         description: result.reason,
         variant: "destructive",
       });
@@ -320,21 +323,21 @@ export default function CreatePromotion() {
       return;
     }
     
-    // Verificar se logo foi aprovado
-    if (!logoValidation?.approved) {
+    // Verificar se logo foi aprovado ou overridden
+    if (logoValidation && !logoValidation.approved && !logoOverridden) {
       toast({
         title: "Logo não aprovado",
-        description: "O logo não foi aprovado pela validação. Por favor, escolha outra imagem.",
+        description: "Clique em 'Continuar assim mesmo' para prosseguir ou escolha outra imagem.",
         variant: "destructive",
       });
       return;
     }
     
-    // Verificar se texto foi validado e aprovado
-    if (textValidation && !textValidation.approved) {
+    // Verificar se texto foi validado e aprovado ou overridden
+    if (textValidation && !textValidation.approved && !textOverridden) {
       toast({
         title: "Descrição não aprovada",
-        description: "A descrição do prêmio não foi aprovada. Por favor, revise o texto.",
+        description: "Clique em 'Continuar assim mesmo' para prosseguir ou revise o texto.",
         variant: "destructive",
       });
       return;
@@ -460,9 +463,25 @@ export default function CreatePromotion() {
         navigate('/admin-panel');
       } else {
         // Patrocinador insere na tabela pending_promotions para validação
+        // Build AI validation notes if any content was overridden
+        const aiNotes: string[] = [];
+        if (logoValidation && !logoValidation.approved && logoOverridden) {
+          aiNotes.push(`[LOGO REPROVADO PELA IA] ${logoValidation.reason}`);
+          if (logoValidation.violations?.length) {
+            aiNotes.push(`Violações: ${logoValidation.violations.join(', ')}`);
+          }
+        }
+        if (textValidation && !textValidation.approved && textOverridden) {
+          aiNotes.push(`[DESCRIÇÃO REPROVADA PELA IA] ${textValidation.reason}`);
+          if (textValidation.violations?.length) {
+            aiNotes.push(`Violações: ${textValidation.violations.join(', ')}`);
+          }
+        }
+
         const pendingData = {
           ...insertData,
-          status: 'pending'
+          status: 'pending',
+          ai_validation_notes: aiNotes.length > 0 ? aiNotes.join('\n') : null,
         };
 
         const { error } = await supabase
@@ -668,32 +687,92 @@ export default function CreatePromotion() {
                   )}
                   
                   {logoValidation && (
-                    <Alert className={logoValidation.approved 
-                      ? "bg-green-50 dark:bg-green-950/30 border-green-500" 
-                      : "bg-red-50 dark:bg-red-950/30 border-red-500"
-                    }>
-                      {logoValidation.approved ? (
-                        <CheckCircle className="h-4 w-4 text-green-600" />
-                      ) : (
-                        <XCircle className="h-4 w-4 text-red-600" />
+                    <>
+                      <Alert className={logoValidation.approved 
+                        ? "bg-green-50 dark:bg-green-950/30 border-green-500" 
+                        : logoOverridden
+                          ? "bg-amber-50 dark:bg-amber-950/30 border-amber-500"
+                          : "bg-red-50 dark:bg-red-950/30 border-red-500"
+                      }>
+                        {logoValidation.approved ? (
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                        ) : logoOverridden ? (
+                          <Shield className="h-4 w-4 text-amber-600" />
+                        ) : (
+                          <XCircle className="h-4 w-4 text-red-600" />
+                        )}
+                        <AlertDescription className={logoValidation.approved ? "text-green-700" : logoOverridden ? "text-amber-700" : "text-red-700"}>
+                          {logoValidation.approved 
+                            ? "✓ Imagem aprovada - Em conformidade com as normas"
+                            : logoOverridden
+                              ? `⚠ Imagem enviada com ressalva - Motivo da IA: ${logoValidation.reason}`
+                              : `✗ Imagem não aprovada: ${logoValidation.reason}`}
+                        </AlertDescription>
+                      </Alert>
+                      {!logoValidation.approved && !logoOverridden && (
+                        <div className="space-y-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="w-full border-amber-500 text-amber-700 hover:bg-amber-50"
+                            onClick={() => setShowLogoOverrideConfirm(true)}
+                          >
+                            <Shield className="h-4 w-4 mr-2" />
+                            Continuar assim mesmo
+                          </Button>
+                        </div>
                       )}
-                      <AlertDescription className={logoValidation.approved ? "text-green-700" : "text-red-700"}>
-                        {logoValidation.approved 
-                          ? "✓ Imagem aprovada - Em conformidade com as normas" 
-                          : `✗ Imagem não aprovada: ${logoValidation.reason}`}
-                      </AlertDescription>
-                    </Alert>
+                      {showLogoOverrideConfirm && !logoOverridden && (
+                        <Alert className="bg-amber-50 dark:bg-amber-950/30 border-amber-500">
+                          <Shield className="h-4 w-4 text-amber-600" />
+                          <AlertDescription className="text-amber-800">
+                            <p className="font-semibold mb-2">⚠ Atenção!</p>
+                            <p className="text-sm mb-3">
+                              O conteúdo foi reprovado pela verificação automática de IA. Ao continuar, 
+                              seu conteúdo será enviado para análise da equipe de validação administrativa, 
+                              que poderá reprová-lo novamente.
+                            </p>
+                            <div className="flex gap-2">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setShowLogoOverrideConfirm(false)}
+                              >
+                                Cancelar
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                className="bg-amber-600 hover:bg-amber-700 text-white"
+                                onClick={() => {
+                                  setLogoOverridden(true);
+                                  setShowLogoOverrideConfirm(false);
+                                }}
+                              >
+                                Confirmar e continuar
+                              </Button>
+                            </div>
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                    </>
                   )}
                   
-                  {logoPreview && logoValidation?.approved && (
+                  {logoPreview && (logoValidation?.approved || logoOverridden) && (
                     <div className="flex justify-center">
                       <div className="relative">
                         <img 
                           src={logoPreview} 
                           alt="Preview do logo" 
-                          className="h-32 w-32 object-contain border-2 border-green-500 rounded-lg"
+                          className={`h-32 w-32 object-contain border-2 rounded-lg ${logoOverridden ? 'border-amber-500' : 'border-green-500'}`}
                         />
-                        <CheckCircle className="absolute -top-2 -right-2 h-6 w-6 text-green-500 bg-white rounded-full" />
+                        {logoOverridden ? (
+                          <Shield className="absolute -top-2 -right-2 h-6 w-6 text-amber-500 bg-white rounded-full" />
+                        ) : (
+                          <CheckCircle className="absolute -top-2 -right-2 h-6 w-6 text-green-500 bg-white rounded-full" />
+                        )}
                       </div>
                     </div>
                   )}
@@ -732,21 +811,77 @@ export default function CreatePromotion() {
                 )}
                 
                 {textValidation && (
-                  <Alert className={textValidation.approved 
-                    ? "bg-green-50 dark:bg-green-950/30 border-green-500" 
-                    : "bg-red-50 dark:bg-red-950/30 border-red-500"
-                  }>
-                    {textValidation.approved ? (
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                    ) : (
-                      <XCircle className="h-4 w-4 text-red-600" />
+                  <>
+                    <Alert className={textValidation.approved 
+                      ? "bg-green-50 dark:bg-green-950/30 border-green-500" 
+                      : textOverridden
+                        ? "bg-amber-50 dark:bg-amber-950/30 border-amber-500"
+                        : "bg-red-50 dark:bg-red-950/30 border-red-500"
+                    }>
+                      {textValidation.approved ? (
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                      ) : textOverridden ? (
+                        <Shield className="h-4 w-4 text-amber-600" />
+                      ) : (
+                        <XCircle className="h-4 w-4 text-red-600" />
+                      )}
+                      <AlertDescription className={textValidation.approved ? "text-green-700" : textOverridden ? "text-amber-700" : "text-red-700"}>
+                        {textValidation.approved 
+                          ? "✓ Texto aprovado - Em conformidade com as normas"
+                          : textOverridden
+                            ? `⚠ Texto enviado com ressalva - Motivo da IA: ${textValidation.reason}`
+                            : `✗ Texto não aprovado: ${textValidation.reason}`}
+                      </AlertDescription>
+                    </Alert>
+                    {!textValidation.approved && !textOverridden && (
+                      <div className="space-y-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="w-full border-amber-500 text-amber-700 hover:bg-amber-50"
+                          onClick={() => setShowTextOverrideConfirm(true)}
+                        >
+                          <Shield className="h-4 w-4 mr-2" />
+                          Continuar assim mesmo
+                        </Button>
+                      </div>
                     )}
-                    <AlertDescription className={textValidation.approved ? "text-green-700" : "text-red-700"}>
-                      {textValidation.approved 
-                        ? "✓ Texto aprovado - Em conformidade com as normas" 
-                        : `✗ Texto não aprovado: ${textValidation.reason}`}
-                    </AlertDescription>
-                  </Alert>
+                    {showTextOverrideConfirm && !textOverridden && (
+                      <Alert className="bg-amber-50 dark:bg-amber-950/30 border-amber-500">
+                        <Shield className="h-4 w-4 text-amber-600" />
+                        <AlertDescription className="text-amber-800">
+                          <p className="font-semibold mb-2">⚠ Atenção!</p>
+                          <p className="text-sm mb-3">
+                            O conteúdo foi reprovado pela verificação automática de IA. Ao continuar, 
+                            seu conteúdo será enviado para análise da equipe de validação administrativa, 
+                            que poderá reprová-lo novamente.
+                          </p>
+                          <div className="flex gap-2">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setShowTextOverrideConfirm(false)}
+                            >
+                              Cancelar
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              className="bg-amber-600 hover:bg-amber-700 text-white"
+                              onClick={() => {
+                                setTextOverridden(true);
+                                setShowTextOverrideConfirm(false);
+                              }}
+                            >
+                              Confirmar e continuar
+                            </Button>
+                          </div>
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                  </>
                 )}
               </div>
 

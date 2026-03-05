@@ -241,6 +241,19 @@ export default function PromotionsMap({ sponsors, onSelectSponsor, onClose }: Pr
         </div>
       </div>
 
+      {/* No promotions message */}
+      {nearbyPromotions.length === 0 && (
+        <div className="px-4 py-3 bg-yellow-500/10 border-b border-yellow-500/30">
+          <p className="text-sm text-center text-yellow-600 dark:text-yellow-400">
+            Nenhuma promoção ativa encontrada em {SEARCH_RADIUS_KM}km. 
+            {sponsors.filter(s => s.latitude && s.longitude).length === 0 
+              ? ' Nenhum patrocinador possui geolocalização cadastrada.'
+              : ` ${sponsors.filter(s => s.promotion_end_date && new Date(s.promotion_end_date) <= new Date()).length} promoções expiradas foram ocultadas.`
+            }
+          </p>
+        </div>
+      )}
+
       {/* Map Container */}
       <div className="flex-1 relative">
         <MapContainer

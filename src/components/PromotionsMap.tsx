@@ -44,7 +44,7 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * c;
 }
 
-// Create pulsing green target icon for promotions (40x52px, anchor at bottom center)
+// Create yellow arrow icon for promotions (40x52px, anchor at bottom center)
 const promotionIcon = L.divIcon({
   className: '',
   iconSize: [40, 52],
@@ -53,20 +53,18 @@ const promotionIcon = L.divIcon({
   html: `
     <div class="pulse-marker" style="width: 40px; height: 52px; display: flex; flex-direction: column; align-items: center;">
       <div style="
-        width: 32px;
-        height: 32px;
-        background: linear-gradient(135deg, #22c55e, #16a34a);
+        width: 36px;
+        height: 36px;
+        background: linear-gradient(135deg, #facc15, #eab308);
         border-radius: 50%;
         border: 3px solid white;
-        box-shadow: 0 4px 12px rgba(34, 197, 94, 0.5);
+        box-shadow: 0 4px 14px rgba(234, 179, 8, 0.6);
         display: flex;
         align-items: center;
         justify-content: center;
       ">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
-          <circle cx="12" cy="12" r="10"/>
-          <circle cx="12" cy="12" r="6"/>
-          <circle cx="12" cy="12" r="2"/>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="1">
+          <path d="M12 2L12 18M12 2L6 8M12 2L18 8"/>
         </svg>
       </div>
       <div style="
@@ -74,7 +72,7 @@ const promotionIcon = L.divIcon({
         height: 0;
         border-left: 8px solid transparent;
         border-right: 8px solid transparent;
-        border-top: 12px solid #16a34a;
+        border-top: 12px solid #eab308;
         margin-top: -2px;
       "></div>
     </div>

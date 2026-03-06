@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Loader2, Upload, CheckCircle, XCircle, Shield, MapPin } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface ValidationResult {
   approved: boolean;
@@ -60,6 +61,7 @@ export default function CreatePromotion() {
   // Geocoding states
   const [geocoding, setGeocoding] = useState(false);
   const [geoLocation, setGeoLocation] = useState<GeoLocation | null>(null);
+  const [registeredCities, setRegisteredCities] = useState<any[]>([]);
 
   useEffect(() => {
     checkUserRoleAndData();

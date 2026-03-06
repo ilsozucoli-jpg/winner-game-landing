@@ -44,7 +44,7 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * c;
 }
 
-// Create yellow arrow icon for promotions (40x52px, anchor at bottom center)
+// Create green arrow icon with "P" for promotions (40x52px, anchor at bottom center)
 const promotionIcon = L.divIcon({
   className: '',
   iconSize: [40, 52],
@@ -55,24 +55,22 @@ const promotionIcon = L.divIcon({
       <div style="
         width: 36px;
         height: 36px;
-        background: linear-gradient(135deg, #facc15, #eab308);
+        background: linear-gradient(135deg, #22c55e, #16a34a);
         border-radius: 50%;
         border: 3px solid white;
-        box-shadow: 0 4px 14px rgba(234, 179, 8, 0.6);
+        box-shadow: 0 4px 14px rgba(34, 197, 94, 0.6);
         display: flex;
         align-items: center;
         justify-content: center;
       ">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="1">
-          <path d="M12 2L12 18M12 2L6 8M12 2L18 8"/>
-        </svg>
+        <span style="color: white; font-weight: 900; font-size: 18px; line-height: 1;">P</span>
       </div>
       <div style="
         width: 0;
         height: 0;
         border-left: 8px solid transparent;
         border-right: 8px solid transparent;
-        border-top: 12px solid #eab308;
+        border-top: 12px solid #16a34a;
         margin-top: -2px;
       "></div>
     </div>
@@ -296,89 +294,36 @@ export default function PromotionsMap({ sponsors, onSelectSponsor, onClose }: Pr
         </MapContainer>
       </div>
 
-      {/* Selected promotion banner - clickable to start game */}
+      {/* Selected promotion - show logo overlay */}
       {selectedSponsor && (
-        <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background via-background to-transparent pt-12">
-          <Card 
-            className="shadow-lg cursor-pointer hover:shadow-xl transition-shadow"
-            onClick={() => onSelectSponsor(selectedSponsor)}
-          >
-            <CardContent className="p-4">
-              <div className="flex gap-4">
-                {/* Logo */}
-                <div className="w-20 h-20 rounded-lg bg-muted flex-shrink-0 overflow-hidden">
-                  <img
-                    src={selectedSponsor.logo_url}
-                    alt={selectedSponsor.name}
-                    className="w-full h-full object-contain"
-                  />
-                </div>
-                
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-bold text-lg truncate">{selectedSponsor.name}</h3>
-                  
-                  <div className="flex items-start gap-1 text-sm text-muted-foreground mt-1">
-                    <MapPin className="w-3 h-3 flex-shrink-0 mt-0.5" />
-                    <span className="line-clamp-2">{getFormattedAddress(selectedSponsor)}</span>
-                  </div>
-                  
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <Award className="w-3 h-3 flex-shrink-0" />
-                    <span>{selectedSponsor.prize_count} {selectedSponsor.prize_count === 1 ? 'prêmio' : 'prêmios'}</span>
-                  </div>
-                  
-                  {selectedSponsor.promotion_end_date && (
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                      <Clock className="w-3 h-3 flex-shrink-0" />
-                      <span>Até {format(new Date(selectedSponsor.promotion_end_date), "dd/MM 'às' HH:mm", { locale: ptBR })}</span>
-                    </div>
-                  )}
-                  
-                  <p className="text-sm font-medium mt-2 line-clamp-2">
-                    {selectedSponsor.prize_description}
-                  </p>
-                </div>
-              </div>
-              
-              {/* Actions - stop propagation to prevent card click */}
-              <div className="flex gap-2 mt-4">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedSponsor(null);
-                  }}
-                >
-                  Fechar
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  className="gap-1"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openGoogleMapsDirections(selectedSponsor);
-                  }}
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  Rota
-                </Button>
-                <Button 
-                  variant="game" 
-                  size="sm"
-                  className="flex-1"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onSelectSponsor(selectedSponsor);
-                  }}
-                >
-                  Jogar Agora
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="absolute inset-0 flex items-center justify-center z-[1000] bg-black/40">
+          <div className="flex flex-col items-center gap-4">
+            {/* Clickable logo - goes to game */}
+            <div 
+              className="w-40 h-40 rounded-2xl bg-white shadow-2xl overflow-hidden cursor-pointer hover:scale-105 transition-transform border-4 border-success"
+              onClick={() => onSelectSponsor(selectedSponsor)}
+            >
+              <img
+                src={selectedSponsor.logo_url}
+                alt={selectedSponsor.name}
+                className="w-full h-full object-contain p-2"
+              />
+            </div>
+            <p className="text-white font-bold text-lg text-center drop-shadow-lg">
+              {selectedSponsor.name}
+            </p>
+            <p className="text-white/80 text-sm text-center drop-shadow">
+              Toque no logo para jogar
+            </p>
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="bg-white/90 hover:bg-white"
+              onClick={() => setSelectedSponsor(null)}
+            >
+              Voltar ao Mapa
+            </Button>
+          </div>
         </div>
       )}
     </div>

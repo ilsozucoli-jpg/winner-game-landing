@@ -2350,6 +2350,75 @@ export default function AdminPanel() {
             </CardContent>
           </Card>
         )}
+
+        {activeSection === 'cities' && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Cidades Cadastradas</CardTitle>
+              <CardDescription>Gerencie as cidades onde patrocinadores e promoções podem ser cadastrados</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex gap-2 items-end">
+                <div className="flex-1 space-y-1">
+                  <Label>Cidade</Label>
+                  <Input
+                    placeholder="Nome da cidade"
+                    value={newCityName}
+                    onChange={(e) => setNewCityName(e.target.value)}
+                  />
+                </div>
+                <div className="w-24 space-y-1">
+                  <Label>UF</Label>
+                  <Input
+                    placeholder="UF"
+                    maxLength={2}
+                    value={newCityState}
+                    onChange={(e) => setNewCityState(e.target.value.toUpperCase())}
+                  />
+                </div>
+                <Button onClick={handleAddCity} disabled={addingCity}>
+                  {addingCity ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Adicionar'}
+                </Button>
+              </div>
+
+              {loadingCities ? (
+                <div className="flex justify-center p-8">
+                  <Loader2 className="h-8 w-8 animate-spin" />
+                </div>
+              ) : registeredCities.length === 0 ? (
+                <p className="text-center text-muted-foreground p-8">Nenhuma cidade cadastrada</p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Cidade</TableHead>
+                      <TableHead>Estado</TableHead>
+                      <TableHead className="w-20">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {registeredCities.map((city) => (
+                      <TableRow key={city.id}>
+                        <TableCell>{city.city}</TableCell>
+                        <TableCell>{city.state}</TableCell>
+                        <TableCell>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleDeleteCity(city.id, city.city, city.state)}
+                            disabled={deletingCity}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

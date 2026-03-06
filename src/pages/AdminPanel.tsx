@@ -522,6 +522,102 @@ export default function AdminPanel() {
     }
   };
 
+  const loadRegisteredCities = async () => {
+    setLoadingCities(true);
+    try {
+      const { data, error } = await supabase
+        .from('registered_cities')
+        .select('*')
+        .order('state', { ascending: true })
+        .order('city', { ascending: true });
+
+      if (error) throw error;
+      setRegisteredCities(data || []);
+    } catch (error: any) {
+      toast({
+        title: "Erro ao carregar cidades",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingCities(false);
+    }
+  };
+
+  const handleAddCity = async () => {
+    if (!newCityName.trim() || !newCityState.trim()) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Preencha cidade e estado.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setAddingCity(true);
+    try {
+      const { error } = await supabase
+        .from('registered_cities')
+        .insert({
+          city: newCityName.trim(),
+          state: newCityState.trim().toUpperCase()
+        });
+
+      if (error) {
+        if (error.code === '23505') {
+          throw new Error('Esta cidade/estado já está cadastrada.');
+        }
+        throw error;
+      }
+
+      toast({
+        title: "Cidade cadastrada!",
+        description: `${newCityName.trim()} - ${newCityState.trim().toUpperCase()} adicionada com sucesso.`,
+      });
+
+      setNewCityName('');
+      setNewCityState('');
+      loadRegisteredCities();
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setAddingCity(false);
+    }
+  };
+
+  const handleDeleteCity = async (cityId: string, cityName: string, cityState: string) => {
+    if (!confirm(`Tem certeza que deseja excluir ${cityName} - ${cityState}?`)) return;
+
+    setDeletingCity(true);
+    try {
+      const { error } = await supabase
+        .from('registered_cities')
+        .delete()
+        .eq('id', cityId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Cidade excluída!",
+        description: `${cityName} - ${cityState} removida com sucesso.`,
+      });
+
+      loadRegisteredCities();
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingCity(false);
+    }
+  };
+
   const checkAdminStatus = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();

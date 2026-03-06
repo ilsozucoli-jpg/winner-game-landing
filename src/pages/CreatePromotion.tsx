@@ -313,6 +313,41 @@ export default function CreatePromotion() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Auto-geocode if coordinates are missing but address info is available
+    let finalGeoLocation = geoLocation;
+    if (!finalGeoLocation) {
+      const address = formData.address || sponsorData?.address;
+      const city = formData.city || sponsorData?.city;
+      const state = formData.state || sponsorData?.state;
+
+      if (address && city && state) {
+        setGeocoding(true);
+        try {
+          const response = await supabase.functions.invoke('geocode-address', {
+            body: { address, city, state }
+          });
+
+          if (response.data?.success) {
+            finalGeoLocation = {
+              latitude: response.data.latitude,
+              longitude: response.data.longitude,
+              formattedAddress: response.data.formattedAddress
+            };
+            setGeoLocation(finalGeoLocation);
+            toast({
+              title: "Localização obtida automaticamente!",
+              description: "As coordenadas foram encontradas para o endereço informado.",
+              className: "bg-green-500 text-white",
+            });
+          }
+        } catch (error) {
+          console.error('Auto-geocoding error:', error);
+        } finally {
+          setGeocoding(false);
+        }
+      }
+    }
+
     // Validação do logo obrigatório
     if (!logoFile) {
       toast({
@@ -440,9 +475,9 @@ export default function CreatePromotion() {
       };
       
       // Adicionar coordenadas se disponíveis
-      if (geoLocation) {
-        insertData.latitude = geoLocation.latitude;
-        insertData.longitude = geoLocation.longitude;
+      if (finalGeoLocation) {
+        insertData.latitude = finalGeoLocation.latitude;
+        insertData.longitude = finalGeoLocation.longitude;
       }
 
       if (isAdmin) {

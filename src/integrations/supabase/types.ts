@@ -162,6 +162,27 @@ export type Database = {
         }
         Relationships: []
       }
+      registered_cities: {
+        Row: {
+          city: string
+          created_at: string
+          id: string
+          state: string
+        }
+        Insert: {
+          city: string
+          created_at?: string
+          id?: string
+          state: string
+        }
+        Update: {
+          city?: string
+          created_at?: string
+          id?: string
+          state?: string
+        }
+        Relationships: []
+      }
       sponsor_registrations: {
         Row: {
           address: string

@@ -1802,18 +1802,27 @@ export default function AdminPanel() {
                                       Cadastrado em: {new Date(sponsor.created_at).toLocaleDateString('pt-BR')}
                                     </p>
                                   </div>
-                                  <Button
-                                    variant="destructive"
-                                    size="sm"
-                                    onClick={() => handleDeleteSponsor(sponsor.id)}
-                                    disabled={deletingSponsor}
-                                  >
-                                    {deletingSponsor ? (
-                                      <Loader2 className="h-4 w-4 animate-spin" />
-                                    ) : (
-                                      <Trash2 className="h-4 w-4" />
-                                    )}
-                                  </Button>
+                                  <div className="flex flex-col gap-2">
+                                    <Button
+                                      variant="secondary"
+                                      size="sm"
+                                      onClick={() => handleOpenEditSponsor(sponsor)}
+                                    >
+                                      <Cog className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      variant="destructive"
+                                      size="sm"
+                                      onClick={() => handleDeleteSponsor(sponsor.id)}
+                                      disabled={deletingSponsor}
+                                    >
+                                      {deletingSponsor ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                      ) : (
+                                        <Trash2 className="h-4 w-4" />
+                                      )}
+                                    </Button>
+                                  </div>
                                 </div>
                               </div>
                             );

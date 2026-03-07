@@ -267,6 +267,8 @@ export default function AdminPanel() {
           promotion_end_date: promotion.promotion_end_date,
           city: promotion.city,
           state: promotion.state,
+          latitude: promotion.latitude,
+          longitude: promotion.longitude,
         };
 
         const { error: insertError } = await supabase

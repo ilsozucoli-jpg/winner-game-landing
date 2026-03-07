@@ -1857,9 +1857,119 @@ export default function AdminPanel() {
                 })()}
               </CardContent>
             </Card>
-        )}
 
-        {activeSection === 'registrations' && (
+            <Dialog open={!!editingSponsor} onOpenChange={(open) => {
+              if (!open) setEditingSponsor(null);
+            }}>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Manutenção da Promoção</DialogTitle>
+                  <DialogDescription>
+                    Atualize os dados da promoção: {editingSponsor?.name}
+                  </DialogDescription>
+                </DialogHeader>
+                {editingSponsor && (
+                  <div className="space-y-4">
+                    <div>
+                      <Label>Data e Hora de Vencimento</Label>
+                      <Input
+                        type="datetime-local"
+                        value={editSponsorData.promotion_end_date}
+                        onChange={(e) => setEditSponsorData(prev => ({ ...prev, promotion_end_date: e.target.value }))}
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Descrição do Prêmio</Label>
+                      <Textarea
+                        value={editSponsorData.prize_description}
+                        onChange={(e) => setEditSponsorData(prev => ({ ...prev, prize_description: e.target.value }))}
+                        rows={3}
+                      />
+                    </div>
+
+                    <div className="border-t pt-4">
+                      <Label className="text-base font-semibold">Endereço</Label>
+                      <div className="space-y-3 mt-2">
+                        <div>
+                          <Label className="text-xs">Endereço Completo</Label>
+                          <Input
+                            value={editSponsorData.address}
+                            onChange={(e) => setEditSponsorData(prev => ({ ...prev, address: e.target.value }))}
+                            placeholder="Rua, número, bairro..."
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <Label className="text-xs">Cidade</Label>
+                            <Input
+                              value={editSponsorData.city}
+                              onChange={(e) => setEditSponsorData(prev => ({ ...prev, city: e.target.value }))}
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Estado</Label>
+                            <Input
+                              value={editSponsorData.state}
+                              onChange={(e) => setEditSponsorData(prev => ({ ...prev, state: e.target.value }))}
+                              maxLength={2}
+                            />
+                          </div>
+                        </div>
+                        <Button
+                          variant="outline"
+                          className="w-full"
+                          onClick={handleGeocodeSponsor}
+                          disabled={geocodingSponsor || !editSponsorData.address}
+                        >
+                          {geocodingSponsor ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Geocodificando...
+                            </>
+                          ) : (
+                            <>
+                              <MapPin className="mr-2 h-4 w-4" />
+                              Atualizar Geolocalização
+                            </>
+                          )}
+                        </Button>
+                        {editingSponsor.latitude && editingSponsor.longitude && (
+                          <p className="text-xs text-green-500">
+                            <MapPin className="inline h-3 w-3 mr-1" />
+                            Geolocalização atual: {editingSponsor.latitude.toFixed(4)}, {editingSponsor.longitude.toFixed(4)}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex gap-4 pt-4 border-t">
+                      <Button
+                        className="flex-1"
+                        onClick={handleSaveSponsor}
+                        disabled={savingSponsor}
+                      >
+                        {savingSponsor ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Salvando...
+                          </>
+                        ) : (
+                          'Salvar Alterações'
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => setEditingSponsor(null)}
+                      >
+                        Cancelar
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
+        )}
           <>
             <Card>
               <CardHeader>

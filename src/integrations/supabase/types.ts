@@ -248,6 +248,7 @@ export type Database = {
       }
       sponsors: {
         Row: {
+          address: string | null
           city: string | null
           created_at: string
           id: string
@@ -265,6 +266,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          address?: string | null
           city?: string | null
           created_at?: string
           id?: string
@@ -282,6 +284,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          address?: string | null
           city?: string | null
           created_at?: string
           id?: string

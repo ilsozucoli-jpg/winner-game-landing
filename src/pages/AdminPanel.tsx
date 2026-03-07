@@ -690,25 +690,55 @@ export default function AdminPanel() {
 
   const handleGeocodeSponsor = async () => {
     if (!editingSponsor) return;
-    const fullAddress = `${editSponsorData.address}, ${editSponsorData.city}, ${editSponsorData.state}, Brasil`;
     setGeocodingSponsor(true);
     try {
-      const response = await supabase.functions.invoke('geocode-address', {
-        body: { address: fullAddress }
+      const response = await supabase.functions.invoke('ai-geocode', {
+        body: { 
+          address: editSponsorData.address,
+          city: editSponsorData.city,
+          state: editSponsorData.state
+        }
       });
 
-      let latitude = null;
-      let longitude = null;
-      if (response.data?.lat && response.data?.lon) {
-        latitude = response.data.lat;
-        longitude = response.data.lon;
+      if (response.error) throw new Error(response.error.message || 'Erro na geocodificação');
+
+      const data = response.data;
+      if (!data?.success || !data?.latitude || !data?.longitude) {
+        toast({
+          title: "Não encontrado",
+          description: data?.error || "Não foi possível encontrar a geolocalização deste endereço.",
+          variant: "destructive",
+        });
+        return;
       }
 
+      setGeocodeConfirmation({
+        latitude: data.latitude,
+        longitude: data.longitude,
+        formatted_address: data.formatted_address,
+        confidence: data.confidence,
+      });
+      setShowGeocodeConfirm(true);
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setGeocodingSponsor(false);
+    }
+  };
+
+  const handleConfirmGeocode = async () => {
+    if (!editingSponsor || !geocodeConfirmation) return;
+    setSavingSponsor(true);
+    try {
       const { error } = await supabase
         .from('sponsors')
         .update({ 
-          latitude, 
-          longitude,
+          latitude: geocodeConfirmation.latitude, 
+          longitude: geocodeConfirmation.longitude,
           address: editSponsorData.address,
           city: editSponsorData.city,
           state: editSponsorData.state.toUpperCase(),
@@ -717,12 +747,16 @@ export default function AdminPanel() {
 
       if (error) throw error;
 
-      setEditingSponsor({ ...editingSponsor, latitude, longitude });
+      setEditingSponsor({ 
+        ...editingSponsor, 
+        latitude: geocodeConfirmation.latitude, 
+        longitude: geocodeConfirmation.longitude 
+      });
+      setShowGeocodeConfirm(false);
+      setGeocodeConfirmation(null);
       toast({
         title: "Sucesso!",
-        description: latitude 
-          ? `Geolocalização atualizada: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}` 
-          : "Endereço salvo (geolocalização não encontrada).",
+        description: `Geolocalização atualizada: ${geocodeConfirmation.latitude.toFixed(4)}, ${geocodeConfirmation.longitude.toFixed(4)}`,
       });
       loadSponsors();
     } catch (error: any) {
@@ -732,7 +766,7 @@ export default function AdminPanel() {
         variant: "destructive",
       });
     } finally {
-      setGeocodingSponsor(false);
+      setSavingSponsor(false);
     }
   };
 

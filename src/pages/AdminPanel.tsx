@@ -91,6 +91,13 @@ export default function AdminPanel() {
   });
   const [savingSponsor, setSavingSponsor] = useState(false);
   const [geocodingSponsor, setGeocodingSponsor] = useState(false);
+  const [geocodeConfirmation, setGeocodeConfirmation] = useState<{
+    latitude: number;
+    longitude: number;
+    formatted_address: string;
+    confidence: string;
+  } | null>(null);
+  const [showGeocodeConfirm, setShowGeocodeConfirm] = useState(false);
 
   useEffect(() => {
     checkAdminStatus();

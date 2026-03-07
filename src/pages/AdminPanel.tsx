@@ -630,7 +630,106 @@ export default function AdminPanel() {
     }
   };
 
-  const checkAdminStatus = async () => {
+  const handleOpenEditSponsor = (sponsor: any) => {
+    setEditingSponsor(sponsor);
+    setEditSponsorData({
+      promotion_end_date: sponsor.promotion_end_date 
+        ? new Date(sponsor.promotion_end_date).toISOString().slice(0, 16) 
+        : '',
+      prize_description: sponsor.prize_description || '',
+      address: sponsor.address || '',
+      city: sponsor.city || '',
+      state: sponsor.state || '',
+    });
+  };
+
+  const handleSaveSponsor = async () => {
+    if (!editingSponsor) return;
+    setSavingSponsor(true);
+    try {
+      const updateData: any = {
+        prize_description: editSponsorData.prize_description,
+        city: editSponsorData.city,
+        state: editSponsorData.state.toUpperCase(),
+        address: editSponsorData.address,
+      };
+      if (editSponsorData.promotion_end_date) {
+        updateData.promotion_end_date = new Date(editSponsorData.promotion_end_date).toISOString();
+      }
+
+      const { error } = await supabase
+        .from('sponsors')
+        .update(updateData)
+        .eq('id', editingSponsor.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso!",
+        description: "Promoção atualizada com sucesso.",
+      });
+      setEditingSponsor(null);
+      loadSponsors();
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSavingSponsor(false);
+    }
+  };
+
+  const handleGeocodeSponsor = async () => {
+    if (!editingSponsor) return;
+    const fullAddress = `${editSponsorData.address}, ${editSponsorData.city}, ${editSponsorData.state}, Brasil`;
+    setGeocodingSponsor(true);
+    try {
+      const response = await supabase.functions.invoke('geocode-address', {
+        body: { address: fullAddress }
+      });
+
+      let latitude = null;
+      let longitude = null;
+      if (response.data?.lat && response.data?.lon) {
+        latitude = response.data.lat;
+        longitude = response.data.lon;
+      }
+
+      const { error } = await supabase
+        .from('sponsors')
+        .update({ 
+          latitude, 
+          longitude,
+          address: editSponsorData.address,
+          city: editSponsorData.city,
+          state: editSponsorData.state.toUpperCase(),
+        })
+        .eq('id', editingSponsor.id);
+
+      if (error) throw error;
+
+      setEditingSponsor({ ...editingSponsor, latitude, longitude });
+      toast({
+        title: "Sucesso!",
+        description: latitude 
+          ? `Geolocalização atualizada: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}` 
+          : "Endereço salvo (geolocalização não encontrada).",
+      });
+      loadSponsors();
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setGeocodingSponsor(false);
+    }
+  };
+
+
     try {
       const { data: { session } } = await supabase.auth.getSession();
       

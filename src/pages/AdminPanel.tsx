@@ -1674,6 +1674,7 @@ export default function AdminPanel() {
         )}
 
         {activeSection === 'sponsors-list' && (
+          <>
             <Card>
               <CardHeader>
                 <CardTitle>Promoções</CardTitle>

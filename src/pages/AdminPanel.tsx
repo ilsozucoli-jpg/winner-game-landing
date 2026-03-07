@@ -2011,6 +2011,84 @@ export default function AdminPanel() {
                 )}
               </DialogContent>
             </Dialog>
+
+            {/* Geocode Confirmation Dialog */}
+            <Dialog open={showGeocodeConfirm} onOpenChange={setShowGeocodeConfirm}>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Confirmar Geolocalização</DialogTitle>
+                  <DialogDescription>
+                    Verifique os dados retornados pela IA antes de salvar.
+                  </DialogDescription>
+                </DialogHeader>
+                {geocodeConfirmation && (
+                  <div className="space-y-4">
+                    <div className="p-4 rounded-lg bg-muted space-y-2">
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Endereço Pesquisado</Label>
+                        <p className="text-sm font-medium">
+                          {editSponsorData.address}, {editSponsorData.city} - {editSponsorData.state}
+                        </p>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Endereço Encontrado pela IA</Label>
+                        <p className="text-sm font-medium">{geocodeConfirmation.formatted_address}</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Latitude</Label>
+                          <p className="text-sm font-mono font-medium">{geocodeConfirmation.latitude.toFixed(6)}</p>
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Longitude</Label>
+                          <p className="text-sm font-mono font-medium">{geocodeConfirmation.longitude.toFixed(6)}</p>
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Nível de Confiança</Label>
+                        <p className={`text-sm font-medium ${
+                          geocodeConfirmation.confidence === 'high' ? 'text-green-600' :
+                          geocodeConfirmation.confidence === 'medium' ? 'text-yellow-600' :
+                          'text-red-600'
+                        }`}>
+                          {geocodeConfirmation.confidence === 'high' ? '🟢 Alta' :
+                           geocodeConfirmation.confidence === 'medium' ? '🟡 Média' :
+                           '🔴 Baixa'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-3">
+                      <Button
+                        className="flex-1"
+                        onClick={handleConfirmGeocode}
+                        disabled={savingSponsor}
+                      >
+                        {savingSponsor ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Salvando...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle className="mr-2 h-4 w-4" />
+                            Confirmar e Salvar
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setShowGeocodeConfirm(false);
+                          setGeocodeConfirmation(null);
+                        }}
+                      >
+                        Cancelar
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
           </>
         )}
 

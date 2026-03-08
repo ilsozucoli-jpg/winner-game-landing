@@ -58,7 +58,11 @@ export default function AdminPanel() {
     basic_test_max_prizes: 10,
     monthly_annual_max_prizes: 100,
     basic_test_max_promotions: 3,
-    monthly_annual_max_promotions: 10
+    monthly_annual_max_promotions: 10,
+    plan_weekly_price: 10.00,
+    plan_monthly_price: 10.00,
+    plan_annual_price: 10.00,
+    max_daily_plays: 50,
   });
   const [savingConfig, setSavingConfig] = useState(false);
   const [promotionsEnabled, setPromotionsEnabled] = useState(true);
@@ -119,7 +123,11 @@ export default function AdminPanel() {
           basic_test_max_prizes: limits.basic_test_max_prizes ?? 10,
           monthly_annual_max_prizes: limits.monthly_annual_max_prizes ?? 100,
           basic_test_max_promotions: limits.basic_test_max_promotions ?? 3,
-          monthly_annual_max_promotions: limits.monthly_annual_max_promotions ?? 10
+          monthly_annual_max_promotions: limits.monthly_annual_max_promotions ?? 10,
+          plan_weekly_price: limits.plan_weekly_price ?? 10.00,
+          plan_monthly_price: limits.plan_monthly_price ?? 10.00,
+          plan_annual_price: limits.plan_annual_price ?? 10.00,
+          max_daily_plays: limits.max_daily_plays ?? 50,
         });
       }
     } catch (error) {
@@ -1180,7 +1188,68 @@ export default function AdminPanel() {
               </div>
 
               <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                <h3 className="font-semibold text-lg">Valores dos Planos</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>Plano Semanal (R$)</Label>
+                    <Input
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      value={promotionLimits.plan_weekly_price}
+                      onChange={(e) => setPromotionLimits({
+                        ...promotionLimits,
+                        plan_weekly_price: Math.max(0.01, parseFloat(e.target.value) || 0.01)
+                      })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Plano Mensal (R$)</Label>
+                    <Input
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      value={promotionLimits.plan_monthly_price}
+                      onChange={(e) => setPromotionLimits({
+                        ...promotionLimits,
+                        plan_monthly_price: Math.max(0.01, parseFloat(e.target.value) || 0.01)
+                      })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Plano Anual (R$)</Label>
+                    <Input
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      value={promotionLimits.plan_annual_price}
+                      onChange={(e) => setPromotionLimits({
+                        ...promotionLimits,
+                        plan_annual_price: Math.max(0.01, parseFloat(e.target.value) || 0.01)
+                      })}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
                 <h3 className="font-semibold text-lg">Jogadores</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Máx. jogadas por usuário por dia</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="1000"
+                      value={promotionLimits.max_daily_plays}
+                      onChange={(e) => setPromotionLimits({
+                        ...promotionLimits,
+                        max_daily_plays: Math.min(1000, Math.max(1, parseInt(e.target.value) || 1))
+                      })}
+                    />
+                    <p className="text-xs text-muted-foreground">Número máximo de jogadas completas por dia por jogador</p>
+                  </div>
+                </div>
                 <div className="p-3 bg-accent/50 rounded-lg">
                   <p className="text-sm">
                     <strong>Ranking:</strong> A quantidade de jogadores armazenados e listados no ranking é igual à 
@@ -1903,7 +1972,7 @@ export default function AdminPanel() {
             <Dialog open={!!editingSponsor} onOpenChange={(open) => {
               if (!open) setEditingSponsor(null);
             }}>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-yellow-50 dark:bg-yellow-950/40 border-yellow-400">
                 <DialogHeader>
                   <DialogTitle>Manutenção da Promoção</DialogTitle>
                   <DialogDescription>
@@ -2014,7 +2083,7 @@ export default function AdminPanel() {
 
             {/* Geocode Confirmation Dialog */}
             <Dialog open={showGeocodeConfirm} onOpenChange={setShowGeocodeConfirm}>
-              <DialogContent className="max-w-md">
+              <DialogContent className="max-w-md bg-yellow-50 dark:bg-yellow-950/40 border-yellow-400">
                 <DialogHeader>
                   <DialogTitle>Confirmar Geolocalização</DialogTitle>
                   <DialogDescription>

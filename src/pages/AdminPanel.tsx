@@ -1972,7 +1972,7 @@ export default function AdminPanel() {
             <Dialog open={!!editingSponsor} onOpenChange={(open) => {
               if (!open) setEditingSponsor(null);
             }}>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-yellow-50 dark:bg-yellow-950/40 border-yellow-400">
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
                 <DialogHeader>
                   <DialogTitle>Manutenção da Promoção</DialogTitle>
                   <DialogDescription>
@@ -2083,7 +2083,7 @@ export default function AdminPanel() {
 
             {/* Geocode Confirmation Dialog */}
             <Dialog open={showGeocodeConfirm} onOpenChange={setShowGeocodeConfirm}>
-              <DialogContent className="max-w-md bg-yellow-50 dark:bg-yellow-950/40 border-yellow-400">
+              <DialogContent className="max-w-md bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
                 <DialogHeader>
                   <DialogTitle>Confirmar Geolocalização</DialogTitle>
                   <DialogDescription>
@@ -2092,7 +2092,7 @@ export default function AdminPanel() {
                 </DialogHeader>
                 {geocodeConfirmation && (
                   <div className="space-y-4">
-                    <div className="p-4 rounded-lg bg-muted space-y-2">
+                    <div className="p-4 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 space-y-2">
                       <div>
                         <Label className="text-xs text-muted-foreground">Endereço Pesquisado</Label>
                         <p className="text-sm font-medium">

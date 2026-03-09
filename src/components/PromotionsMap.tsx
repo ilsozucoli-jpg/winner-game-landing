@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet';
 import L from 'leaflet';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, MapPin, Award, Clock, Loader2, Navigation, AlertCircle, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { supabase } from '@/integrations/supabase/client';
 import 'leaflet/dist/leaflet.css';
 
 interface Sponsor {
@@ -29,11 +30,11 @@ interface PromotionsMapProps {
   onClose: () => void;
 }
 
-const SEARCH_RADIUS_KM = 50;
+const DEFAULT_RADIUS_KM = 25;
 
 // Calculate distance between two coordinates in kilometers (Haversine formula)
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371; // Earth's radius in km
+  const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
   const a = 
@@ -44,14 +45,14 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * c;
 }
 
-// Create green arrow icon with "P" for promotions (40x52px, anchor at bottom center)
+// Create green arrow icon with "P" for promotions
 const promotionIcon = L.divIcon({
   className: '',
   iconSize: [40, 52],
   iconAnchor: [20, 52],
   popupAnchor: [0, -52],
   html: `
-    <div class="pulse-marker" style="width: 40px; height: 52px; display: flex; flex-direction: column; align-items: center;">
+    <div style="width: 40px; height: 52px; display: flex; flex-direction: column; align-items: center;">
       <div style="
         width: 36px;
         height: 36px;
@@ -77,7 +78,7 @@ const promotionIcon = L.divIcon({
   `
 });
 
-// Create user location icon (18x18px, anchor at center)
+// Create user location icon
 const userIcon = L.divIcon({
   className: '',
   iconSize: [18, 18],
@@ -99,6 +100,28 @@ export default function PromotionsMap({ sponsors, onSelectSponsor, onClose }: Pr
   const [geoError, setGeoError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedSponsor, setSelectedSponsor] = useState<Sponsor | null>(null);
+  const [searchRadiusKm, setSearchRadiusKm] = useState(DEFAULT_RADIUS_KM);
+
+  // Load map radius from system settings
+  useEffect(() => {
+    const loadRadius = async () => {
+      try {
+        const { data } = await supabase
+          .from('system_settings')
+          .select('setting_value')
+          .eq('setting_key', 'promotion_limits')
+          .single();
+
+        if (data?.setting_value) {
+          const limits = data.setting_value as any;
+          setSearchRadiusKm(limits.map_radius_km ?? DEFAULT_RADIUS_KM);
+        }
+      } catch (error) {
+        console.error('Error loading map radius:', error);
+      }
+    };
+    loadRadius();
+  }, []);
 
   // Request geolocation on mount
   useEffect(() => {
@@ -143,40 +166,16 @@ export default function PromotionsMap({ sponsors, onSelectSponsor, onClose }: Pr
     
     const now = new Date();
     return sponsors.filter(sponsor => {
-      // Must have coordinates
       if (!sponsor.latitude || !sponsor.longitude) return false;
-      
-      // Must be active (not expired)
       if (sponsor.promotion_end_date && new Date(sponsor.promotion_end_date) <= now) return false;
       
-      // Must be within search radius
       const distance = calculateDistance(
         userPosition[0], userPosition[1],
         sponsor.latitude, sponsor.longitude
       );
-      return distance <= SEARCH_RADIUS_KM;
+      return distance <= searchRadiusKm;
     });
-  }, [sponsors, userPosition]);
-
-  // Open Google Maps with directions
-  const openGoogleMapsDirections = (sponsor: Sponsor) => {
-    if (!sponsor.latitude || !sponsor.longitude || !userPosition) return;
-    
-    const origin = `${userPosition[0]},${userPosition[1]}`;
-    const destination = `${sponsor.latitude},${sponsor.longitude}`;
-    const url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving`;
-    
-    window.open(url, '_blank');
-  };
-
-  // Get formatted address (full address if available)
-  const getFormattedAddress = (sponsor: Sponsor) => {
-    const parts: string[] = [];
-    if (sponsor.address) parts.push(sponsor.address);
-    if (sponsor.city) parts.push(sponsor.city);
-    if (sponsor.state) parts.push(sponsor.state);
-    return parts.length > 0 ? parts.join(', ') : 'Endereço não disponível';
-  };
+  }, [sponsors, userPosition, searchRadiusKm]);
 
   // Loading state
   if (loading) {
@@ -230,7 +229,7 @@ export default function PromotionsMap({ sponsors, onSelectSponsor, onClose }: Pr
         <div className="flex-1">
           <h2 className="font-semibold">Mapa das Promoções</h2>
           <p className="text-sm text-muted-foreground">
-            {nearbyPromotions.length} promoções em até {SEARCH_RADIUS_KM}km
+            {nearbyPromotions.length} promoções em até {searchRadiusKm}km
           </p>
         </div>
         <div className="flex items-center gap-1 text-sm text-primary">
@@ -243,7 +242,7 @@ export default function PromotionsMap({ sponsors, onSelectSponsor, onClose }: Pr
       {nearbyPromotions.length === 0 && (
         <div className="px-4 py-3 bg-yellow-500/10 border-b border-yellow-500/30">
           <p className="text-sm text-center text-yellow-600 dark:text-yellow-400">
-            Nenhuma promoção ativa encontrada em {SEARCH_RADIUS_KM}km. 
+            Nenhuma promoção ativa encontrada em {searchRadiusKm}km. 
             {sponsors.filter(s => s.latitude && s.longitude).length === 0 
               ? ' Nenhum patrocinador possui geolocalização cadastrada.'
               : ` ${sponsors.filter(s => s.promotion_end_date && new Date(s.promotion_end_date) <= new Date()).length} promoções expiradas foram ocultadas.`
@@ -256,7 +255,7 @@ export default function PromotionsMap({ sponsors, onSelectSponsor, onClose }: Pr
       <div className="flex-1 relative">
         <MapContainer
           center={userPosition}
-          zoom={12}
+          zoom={11}
           style={{ 
             position: 'absolute',
             top: 0,
@@ -269,6 +268,18 @@ export default function PromotionsMap({ sponsors, onSelectSponsor, onClose }: Pr
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          
+          {/* Radius circle - 80% transparency (opacity 0.2), green border */}
+          <Circle
+            center={userPosition}
+            radius={searchRadiusKm * 1000}
+            pathOptions={{
+              color: '#22c55e',
+              weight: 2,
+              fillColor: '#22c55e',
+              fillOpacity: 0.2,
+            }}
           />
           
           {/* User marker */}
@@ -294,11 +305,10 @@ export default function PromotionsMap({ sponsors, onSelectSponsor, onClose }: Pr
         </MapContainer>
       </div>
 
-      {/* Selected promotion - show logo overlay */}
+      {/* Selected promotion overlay */}
       {selectedSponsor && (
         <div className="absolute inset-0 flex items-center justify-center z-[1000] bg-black/40">
           <div className="flex flex-col items-center gap-4">
-            {/* Clickable logo - goes to game */}
             <div 
               className="w-40 h-40 rounded-2xl bg-white shadow-2xl overflow-hidden cursor-pointer hover:scale-105 transition-transform border-4 border-success"
               onClick={() => onSelectSponsor(selectedSponsor)}

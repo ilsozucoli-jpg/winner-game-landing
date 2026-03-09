@@ -60,6 +60,12 @@ export default function Results() {
   const saveGameResult = async () => {
     if (!userData || !selectedSponsor) return;
 
+    // Don't save zero-point results (e.g. when daily limit was exceeded)
+    if (totalPoints <= 0) {
+      await checkRankingPosition();
+      return;
+    }
+
     try {
       // Get current user session
       const { data: { session } } = await supabase.auth.getSession();

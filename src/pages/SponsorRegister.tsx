@@ -258,7 +258,7 @@ export default function SponsorRegister() {
 
         // Upload do novo comprovante
         const paymentProofUrl = await uploadPaymentProof(user.id);
-        const selectedPlan = PLAN_OPTIONS.find(p => p.value === formData.plan);
+        const selectedPlan = planOptions.find(p => p.value === formData.plan);
 
         // Atualizar registro de patrocinador
         const updateData: any = {

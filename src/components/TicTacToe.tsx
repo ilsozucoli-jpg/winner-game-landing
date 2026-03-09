@@ -176,8 +176,7 @@ export function TicTacToe({ onComplete, timeLimit }: TicTacToeProps) {
         }
 
         if (isBoardFull(newBoard)) {
-          setMessage('⚖️ Empate! Tente novamente.');
-          setTimeout(resetBoard, 1500);
+          handleFailure('⚖️ Empate!');
           return;
         }
 

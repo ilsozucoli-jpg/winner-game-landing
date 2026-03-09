@@ -176,7 +176,7 @@ export function TicTacToe({ onComplete, timeLimit }: TicTacToeProps) {
     <div className="bg-card border border-border rounded-lg p-6 space-y-6 animate-slide-up">
       <div className="text-center space-y-4">
         <h2 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-          Jogo da Velha
+          Tic-Tac-Toe
         </h2>
         
         <div className="flex items-center justify-center gap-4">

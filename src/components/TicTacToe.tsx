@@ -24,6 +24,7 @@ export function TicTacToe({ onComplete, timeLimit }: TicTacToeProps) {
   const [gameOver, setGameOver] = useState(false);
   const [message, setMessage] = useState('Ganhe 3 vezes em 60 segundos!');
   const [winningLine, setWinningLine] = useState<number[] | null>(null);
+  const [failures, setFailures] = useState(0);
 
   // Timer countdown
   useEffect(() => {

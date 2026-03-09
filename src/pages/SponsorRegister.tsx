@@ -350,7 +350,7 @@ export default function SponsorRegister() {
     }
   };
 
-  const selectedPlan = PLAN_OPTIONS.find(p => p.value === formData.plan);
+  const selectedPlan = planOptions.find(p => p.value === formData.plan);
 
   if (loading) {
     return (

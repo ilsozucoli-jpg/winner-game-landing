@@ -548,7 +548,7 @@ export default function SponsorRegister() {
                 <AlertDescription className="text-sm">
                   <strong>Limites do plano selecionado:</strong>
                   <ul className="mt-2 space-y-1 list-disc list-inside">
-                    {formData.plan === 'test' ? (
+                    {formData.plan === 'weekly' ? (
                       <>
                         <li>Até <strong>{promotionLimits.basic_test_max_prizes}</strong> prêmios por promoção</li>
                         <li>Até <strong>{promotionLimits.basic_test_max_promotions}</strong> promoções por mês</li>

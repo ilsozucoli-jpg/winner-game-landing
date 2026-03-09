@@ -300,7 +300,7 @@ export default function SponsorRegister() {
 
         // Upload do comprovante
         const paymentProofUrl = await uploadPaymentProof(user.id);
-        const selectedPlan = PLAN_OPTIONS.find(p => p.value === formData.plan);
+        const selectedPlan = planOptions.find(p => p.value === formData.plan);
         
         // Inserir registro de patrocinador
         const insertData: any = {

@@ -99,7 +99,14 @@ export default function SponsorRegister() {
         .single();
 
       if (data?.setting_value) {
-        setPromotionLimits(data.setting_value);
+        const limits = data.setting_value as any;
+        setPromotionLimits(limits);
+        // Update plan prices from admin settings
+        setPlanOptions([
+          { value: 'weekly', label: 'Semanal', price: limits.plan_weekly_price ?? 10.00 },
+          { value: 'monthly', label: 'Mensal', price: limits.plan_monthly_price ?? 50.00 },
+          { value: 'annual', label: 'Anual', price: limits.plan_annual_price ?? 400.00 },
+        ]);
       }
     } catch (error) {
       console.error('Erro ao carregar limites:', error);

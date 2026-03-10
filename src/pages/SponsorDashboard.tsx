@@ -60,6 +60,16 @@ export default function SponsorDashboard() {
   const [selectedPromotion, setSelectedPromotion] = useState<Promotion | null>(null);
   const [rankingPlayers, setRankingPlayers] = useState<RankingPlayer[]>([]);
   const [loadingRanking, setLoadingRanking] = useState(false);
+  const [showSupportDialog, setShowSupportDialog] = useState(false);
+  const [supportSubject, setSupportSubject] = useState('');
+  const [supportMessage, setSupportMessage] = useState('');
+  const [supportPromotionId, setSupportPromotionId] = useState('');
+  const [supportAttachment, setSupportAttachment] = useState<File | null>(null);
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [allPromotions, setAllPromotions] = useState<Promotion[]>([]);
+  const [showMyMessages, setShowMyMessages] = useState(false);
+  const [myMessages, setMyMessages] = useState<any[]>([]);
+  const [loadingMessages, setLoadingMessages] = useState(false);
 
   useEffect(() => {
     loadSponsorData();

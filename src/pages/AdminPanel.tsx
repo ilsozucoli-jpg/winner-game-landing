@@ -2952,6 +2952,118 @@ export default function AdminPanel() {
             </CardContent>
           </Card>
         )}
+
+        {activeSection === 'messages' && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5" />
+                Mensagens de Suporte
+                {pendingMessagesCount > 0 && (
+                  <Badge variant="destructive">{pendingMessagesCount} pendente{pendingMessagesCount > 1 ? 's' : ''}</Badge>
+                )}
+              </CardTitle>
+              <CardDescription>Leia e responda as mensagens dos patrocinadores</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loadingMessages ? (
+                <div className="flex justify-center p-8">
+                  <Loader2 className="h-8 w-8 animate-spin" />
+                </div>
+              ) : supportMessages.length === 0 ? (
+                <p className="text-center text-muted-foreground p-8">Nenhuma mensagem recebida</p>
+              ) : (
+                <div className="space-y-3">
+                  {supportMessages.map((msg) => (
+                    <Card 
+                      key={msg.id} 
+                      className={`cursor-pointer hover:shadow-md transition-shadow ${!msg.is_read ? 'border-primary/50 bg-primary/5' : ''}`}
+                      onClick={() => {
+                        setSelectedMessage(msg);
+                        setAdminReply(msg.admin_reply || '');
+                        if (!msg.is_read) handleMarkAsRead(msg.id);
+                      }}
+                    >
+                      <CardContent className="pt-4">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              {!msg.is_read && <div className="w-2 h-2 rounded-full bg-primary" />}
+                              <Badge variant="outline">{msg.subject}</Badge>
+                              <span className="text-xs text-muted-foreground">{msg.promotion_name}</span>
+                            </div>
+                            <p className="text-sm truncate">{msg.message}</p>
+                            {msg.attachment_url && (
+                              <span className="text-xs text-primary flex items-center gap-1 mt-1">
+                                <Paperclip className="h-3 w-3" /> Anexo
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-right ml-4">
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(msg.created_at).toLocaleString('pt-BR')}
+                            </p>
+                            {msg.admin_reply && <Badge variant="secondary" className="text-xs mt-1">Respondida</Badge>}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Message Detail Dialog */}
+        <Dialog open={!!selectedMessage} onOpenChange={(open) => { if (!open) setSelectedMessage(null); }}>
+          <DialogContent className="max-w-lg bg-white">
+            <DialogHeader>
+              <DialogTitle>Detalhes da Mensagem</DialogTitle>
+              <DialogDescription>
+                {selectedMessage?.promotion_name} — {selectedMessage?.subject}
+              </DialogDescription>
+            </DialogHeader>
+            {selectedMessage && (
+              <div className="space-y-4">
+                <div className="p-3 bg-muted/50 rounded-lg space-y-2">
+                  <p className="text-xs text-muted-foreground">
+                    Enviada em: {new Date(selectedMessage.created_at).toLocaleString('pt-BR')}
+                  </p>
+                  <p className="text-sm">{selectedMessage.message}</p>
+                  {selectedMessage.attachment_url && (
+                    <a href={selectedMessage.attachment_url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary underline flex items-center gap-1">
+                      <Paperclip className="h-3 w-3" /> Ver anexo
+                    </a>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Resposta</Label>
+                  <Textarea
+                    placeholder="Escreva sua resposta..."
+                    value={adminReply}
+                    onChange={(e) => setAdminReply(e.target.value)}
+                    rows={4}
+                  />
+                </div>
+
+                <Button
+                  onClick={handleSendAdminReply}
+                  disabled={sendingReply}
+                  className="w-full"
+                >
+                  {sendingReply ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Enviando...
+                    </>
+                  ) : selectedMessage.admin_reply ? 'Atualizar Resposta' : 'Enviar Resposta'}
+                </Button>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

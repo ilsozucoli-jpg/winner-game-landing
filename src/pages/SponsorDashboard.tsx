@@ -498,6 +498,31 @@ export default function SponsorDashboard() {
                   <Plus className="mr-2 h-5 w-5" />
                   Cadastrar Promoção
                 </Button>
+
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={() => setShowSupportDialog(true)} 
+                    variant="outline"
+                    size="lg"
+                    className="flex-1"
+                  >
+                    <MessageSquare className="mr-2 h-5 w-5" />
+                    Suporte
+                  </Button>
+                  <Button 
+                    onClick={async () => {
+                      const { data: { session } } = await supabase.auth.getSession();
+                      if (session) await loadMyMessages(session.user.id);
+                      setShowMyMessages(true);
+                    }} 
+                    variant="outline"
+                    size="lg"
+                    className="flex-1"
+                  >
+                    <Mail className="mr-2 h-5 w-5" />
+                    Minhas Mensagens
+                  </Button>
+                </div>
               </div>
             )}
 

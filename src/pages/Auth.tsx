@@ -90,7 +90,19 @@ export default function Auth() {
           password,
         });
 
-        if (error) throw error;
+        if (error) {
+          // If user not found, switch to signup mode
+          if (error.message?.includes('Invalid login credentials')) {
+            toast({
+              title: "Usuário não encontrado",
+              description: "Crie sua conta para começar.",
+            });
+            setIsLogin(false);
+            setLoading(false);
+            return;
+          }
+          throw error;
+        }
         
         toast({
           title: "Login realizado!",
@@ -125,7 +137,7 @@ export default function Auth() {
           }
         }
       } else {
-        const { error } = await supabase.auth.signUp({
+        const { data: signUpData, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -135,6 +147,17 @@ export default function Auth() {
 
         if (error) throw error;
         
+        // Check if user already exists (signUp returns user but no session for existing users)
+        if (signUpData?.user?.identities?.length === 0) {
+          toast({
+            title: "Usuário já cadastrado",
+            description: "Este email já está registrado. Faça login.",
+            variant: "destructive",
+          });
+          setIsLogin(true);
+          return;
+        }
+
         toast({
           title: "Cadastro realizado!",
           description: "Faça login para continuar.",

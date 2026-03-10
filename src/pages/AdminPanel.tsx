@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, UserPlus, Trash2, MapPin, Shield, Building } from 'lucide-react';
+import { Loader2, UserPlus, Trash2, MapPin, Shield, Building, MessageSquare, Paperclip } from 'lucide-react';
 import { createAdminUser } from '@/lib/adminUtils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -13,6 +13,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Settings, Users, UserX, Key, List, Zap, Store, CheckCircle, XCircle, Cog } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 export default function AdminPanel() {
   const navigate = useNavigate();
@@ -47,7 +49,13 @@ export default function AdminPanel() {
   const [approvingRegistration, setApprovingRegistration] = useState(false);
   const [editingValidityDate, setEditingValidityDate] = useState(false);
   const [newValidityDate, setNewValidityDate] = useState('');
-  const [activeSection, setActiveSection] = useState<'users' | 'delete' | 'password' | 'list' | 'shortcuts' | 'sponsors-list' | 'registrations' | 'pending-promotions' | 'config' | 'cities'>('users');
+  const [activeSection, setActiveSection] = useState<'users' | 'delete' | 'password' | 'list' | 'shortcuts' | 'sponsors-list' | 'registrations' | 'pending-promotions' | 'config' | 'cities' | 'messages'>('users');
+  const [supportMessages, setSupportMessages] = useState<any[]>([]);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [pendingMessagesCount, setPendingMessagesCount] = useState(0);
+  const [selectedMessage, setSelectedMessage] = useState<any | null>(null);
+  const [adminReply, setAdminReply] = useState('');
+  const [sendingReply, setSendingReply] = useState(false);
   const [registeredCities, setRegisteredCities] = useState<any[]>([]);
   const [loadingCities, setLoadingCities] = useState(false);
   const [newCityName, setNewCityName] = useState('');
@@ -108,6 +116,7 @@ export default function AdminPanel() {
     checkAdminStatus();
     loadPromotionsSetting();
     loadPromotionLimits();
+    loadPendingMessagesCount();
   }, []);
 
   const loadPromotionLimits = async () => {
@@ -134,6 +143,86 @@ export default function AdminPanel() {
       }
     } catch (error) {
       console.error('Erro ao carregar limites:', error);
+    }
+  };
+
+  const loadPendingMessagesCount = async () => {
+    try {
+      const { count } = await supabase
+        .from('support_messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_read', false);
+      setPendingMessagesCount(count || 0);
+    } catch (error) {
+      console.error('Erro ao carregar contagem de mensagens:', error);
+    }
+  };
+
+  const loadSupportMessages = async () => {
+    setLoadingMessages(true);
+    try {
+      const { data, error } = await supabase
+        .from('support_messages')
+        .select('*')
+        .order('is_read', { ascending: true })
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setSupportMessages(data || []);
+    } catch (error: any) {
+      toast({
+        title: "Erro ao carregar mensagens",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingMessages(false);
+    }
+  };
+
+  const handleMarkAsRead = async (messageId: string) => {
+    try {
+      const { error } = await supabase
+        .from('support_messages')
+        .update({ is_read: true })
+        .eq('id', messageId);
+
+      if (error) throw error;
+      loadSupportMessages();
+      loadPendingMessagesCount();
+    } catch (error: any) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const handleSendAdminReply = async () => {
+    if (!selectedMessage || !adminReply.trim()) {
+      toast({ title: "Erro", description: "Escreva uma resposta.", variant: "destructive" });
+      return;
+    }
+
+    setSendingReply(true);
+    try {
+      const { error } = await supabase
+        .from('support_messages')
+        .update({
+          admin_reply: adminReply.trim(),
+          admin_replied_at: new Date().toISOString(),
+          is_read: true,
+        })
+        .eq('id', selectedMessage.id);
+
+      if (error) throw error;
+
+      toast({ title: "Resposta enviada!", description: "A resposta foi registrada com sucesso." });
+      setSelectedMessage(null);
+      setAdminReply('');
+      loadSupportMessages();
+      loadPendingMessagesCount();
+    } catch (error: any) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    } finally {
+      setSendingReply(false);
     }
   };
 
@@ -1043,6 +1132,7 @@ export default function AdminPanel() {
     { id: 'list', label: 'Lista Usuários', icon: List, color: 'bg-purple-500 hover:bg-purple-600' },
     { id: 'shortcuts', label: 'Atalhos Etapas', icon: Zap, color: 'bg-cyan-500 hover:bg-cyan-600' },
     { id: 'cities', label: 'Cidades Cadastradas', icon: Building, color: 'bg-teal-500 hover:bg-teal-600' },
+    { id: 'messages', label: `Mensagens${pendingMessagesCount > 0 ? ` (${pendingMessagesCount})` : ''}`, icon: MessageSquare, color: 'bg-pink-500 hover:bg-pink-600' },
   ];
 
   return (
@@ -1104,6 +1194,7 @@ export default function AdminPanel() {
                     if (button.id === 'registrations') loadSponsorRegistrations();
                     if (button.id === 'pending-promotions') loadPendingPromotions();
                     if (button.id === 'cities') loadRegisteredCities();
+                    if (button.id === 'messages') loadSupportMessages();
                   }
                 }}
                 className={`${button.color} text-white h-24 flex flex-col items-center justify-center gap-2 transition-all`}
@@ -2863,6 +2954,118 @@ export default function AdminPanel() {
             </CardContent>
           </Card>
         )}
+
+        {activeSection === 'messages' && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5" />
+                Mensagens de Suporte
+                {pendingMessagesCount > 0 && (
+                  <Badge variant="destructive">{pendingMessagesCount} pendente{pendingMessagesCount > 1 ? 's' : ''}</Badge>
+                )}
+              </CardTitle>
+              <CardDescription>Leia e responda as mensagens dos patrocinadores</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loadingMessages ? (
+                <div className="flex justify-center p-8">
+                  <Loader2 className="h-8 w-8 animate-spin" />
+                </div>
+              ) : supportMessages.length === 0 ? (
+                <p className="text-center text-muted-foreground p-8">Nenhuma mensagem recebida</p>
+              ) : (
+                <div className="space-y-3">
+                  {supportMessages.map((msg) => (
+                    <Card 
+                      key={msg.id} 
+                      className={`cursor-pointer hover:shadow-md transition-shadow ${!msg.is_read ? 'border-primary/50 bg-primary/5' : ''}`}
+                      onClick={() => {
+                        setSelectedMessage(msg);
+                        setAdminReply(msg.admin_reply || '');
+                        if (!msg.is_read) handleMarkAsRead(msg.id);
+                      }}
+                    >
+                      <CardContent className="pt-4">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              {!msg.is_read && <div className="w-2 h-2 rounded-full bg-primary" />}
+                              <Badge variant="outline">{msg.subject}</Badge>
+                              <span className="text-xs text-muted-foreground">{msg.promotion_name}</span>
+                            </div>
+                            <p className="text-sm truncate">{msg.message}</p>
+                            {msg.attachment_url && (
+                              <span className="text-xs text-primary flex items-center gap-1 mt-1">
+                                <Paperclip className="h-3 w-3" /> Anexo
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-right ml-4">
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(msg.created_at).toLocaleString('pt-BR')}
+                            </p>
+                            {msg.admin_reply && <Badge variant="secondary" className="text-xs mt-1">Respondida</Badge>}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Message Detail Dialog */}
+        <Dialog open={!!selectedMessage} onOpenChange={(open) => { if (!open) setSelectedMessage(null); }}>
+          <DialogContent className="max-w-lg bg-white">
+            <DialogHeader>
+              <DialogTitle>Detalhes da Mensagem</DialogTitle>
+              <DialogDescription>
+                {selectedMessage?.promotion_name} — {selectedMessage?.subject}
+              </DialogDescription>
+            </DialogHeader>
+            {selectedMessage && (
+              <div className="space-y-4">
+                <div className="p-3 bg-muted/50 rounded-lg space-y-2">
+                  <p className="text-xs text-muted-foreground">
+                    Enviada em: {new Date(selectedMessage.created_at).toLocaleString('pt-BR')}
+                  </p>
+                  <p className="text-sm">{selectedMessage.message}</p>
+                  {selectedMessage.attachment_url && (
+                    <a href={selectedMessage.attachment_url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary underline flex items-center gap-1">
+                      <Paperclip className="h-3 w-3" /> Ver anexo
+                    </a>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Resposta</Label>
+                  <Textarea
+                    placeholder="Escreva sua resposta..."
+                    value={adminReply}
+                    onChange={(e) => setAdminReply(e.target.value)}
+                    rows={4}
+                  />
+                </div>
+
+                <Button
+                  onClick={handleSendAdminReply}
+                  disabled={sendingReply}
+                  className="w-full"
+                >
+                  {sendingReply ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Enviando...
+                    </>
+                  ) : selectedMessage.admin_reply ? 'Atualizar Resposta' : 'Enviar Resposta'}
+                </Button>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

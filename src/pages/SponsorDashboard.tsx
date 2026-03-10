@@ -7,7 +7,11 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Phone, Mail, MapPin, Calendar, Trophy, AlertCircle, Plus, Image, Users } from 'lucide-react';
+import { Loader2, Phone, Mail, MapPin, Calendar, Trophy, AlertCircle, Plus, Image, Users, MessageSquare, Paperclip, Send } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 
 interface Promotion {
@@ -56,6 +60,16 @@ export default function SponsorDashboard() {
   const [selectedPromotion, setSelectedPromotion] = useState<Promotion | null>(null);
   const [rankingPlayers, setRankingPlayers] = useState<RankingPlayer[]>([]);
   const [loadingRanking, setLoadingRanking] = useState(false);
+  const [showSupportDialog, setShowSupportDialog] = useState(false);
+  const [supportSubject, setSupportSubject] = useState('');
+  const [supportMessage, setSupportMessage] = useState('');
+  const [supportPromotionId, setSupportPromotionId] = useState('');
+  const [supportAttachment, setSupportAttachment] = useState<File | null>(null);
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [allPromotions, setAllPromotions] = useState<Promotion[]>([]);
+  const [showMyMessages, setShowMyMessages] = useState(false);
+  const [myMessages, setMyMessages] = useState<any[]>([]);
+  const [loadingMessages, setLoadingMessages] = useState(false);
 
   useEffect(() => {
     loadSponsorData();
@@ -96,9 +110,9 @@ export default function SponsorDashboard() {
 
       setSponsorData(data);
       
-      // Load promotions
       await loadPromotions(session.user.id);
       await loadPendingPromotions(session.user.id);
+      await loadMyMessages(session.user.id);
     } catch (error: any) {
       toast({
         title: "Erro",
@@ -130,6 +144,7 @@ export default function SponsorDashboard() {
 
       setActivePromotions(active);
       setExpiredPromotions(expired);
+      setAllPromotions(data || []);
     } catch (error) {
       console.error('Error loading promotions:', error);
     }
@@ -148,6 +163,91 @@ export default function SponsorDashboard() {
       setPendingPromotions(data || []);
     } catch (error) {
       console.error('Error loading pending promotions:', error);
+    }
+  };
+
+  const loadMyMessages = async (userId: string) => {
+    setLoadingMessages(true);
+    try {
+      const { data, error } = await supabase
+        .from('support_messages')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setMyMessages(data || []);
+    } catch (error) {
+      console.error('Error loading messages:', error);
+    } finally {
+      setLoadingMessages(false);
+    }
+  };
+
+  const handleSendSupportMessage = async () => {
+    if (!supportPromotionId || !supportSubject || !supportMessage.trim()) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Preencha todos os campos obrigatórios.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSendingMessage(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Não autenticado');
+
+      let attachmentUrl = null;
+      if (supportAttachment) {
+        const fileExt = supportAttachment.name.split('.').pop();
+        const filePath = `${session.user.id}/${Date.now()}.${fileExt}`;
+        const { error: uploadError } = await supabase.storage
+          .from('message-attachments')
+          .upload(filePath, supportAttachment);
+        if (uploadError) throw uploadError;
+        const { data: urlData } = supabase.storage
+          .from('message-attachments')
+          .getPublicUrl(filePath);
+        attachmentUrl = urlData.publicUrl;
+      }
+
+      const selectedPromo = allPromotions.find(p => p.id === supportPromotionId);
+
+      const { error } = await supabase
+        .from('support_messages')
+        .insert({
+          user_id: session.user.id,
+          sponsor_registration_id: sponsorData.id,
+          promotion_id: supportPromotionId,
+          promotion_name: selectedPromo?.name || 'Promoção',
+          subject: supportSubject,
+          message: supportMessage.trim(),
+          attachment_url: attachmentUrl,
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Mensagem enviada!",
+        description: "Sua mensagem foi enviada para a equipe de suporte.",
+      });
+
+      setShowSupportDialog(false);
+      setSupportSubject('');
+      setSupportMessage('');
+      setSupportPromotionId('');
+      setSupportAttachment(null);
+      await loadMyMessages(session.user.id);
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSendingMessage(false);
     }
   };
 
@@ -398,6 +498,31 @@ export default function SponsorDashboard() {
                   <Plus className="mr-2 h-5 w-5" />
                   Cadastrar Promoção
                 </Button>
+
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={() => setShowSupportDialog(true)} 
+                    variant="outline"
+                    size="lg"
+                    className="flex-1"
+                  >
+                    <MessageSquare className="mr-2 h-5 w-5" />
+                    Suporte
+                  </Button>
+                  <Button 
+                    onClick={async () => {
+                      const { data: { session } } = await supabase.auth.getSession();
+                      if (session) await loadMyMessages(session.user.id);
+                      setShowMyMessages(true);
+                    }} 
+                    variant="outline"
+                    size="lg"
+                    className="flex-1"
+                  >
+                    <Mail className="mr-2 h-5 w-5" />
+                    Minhas Mensagens
+                  </Button>
+                </div>
               </div>
             )}
 
@@ -621,6 +746,148 @@ export default function SponsorDashboard() {
                 </div>
               </ScrollArea>
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Support Message Dialog */}
+        <Dialog open={showSupportDialog} onOpenChange={setShowSupportDialog}>
+          <DialogContent className="max-w-lg bg-white">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5 text-primary" />
+                Enviar Mensagem ao Suporte
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Promoção *</Label>
+                <Select value={supportPromotionId} onValueChange={setSupportPromotionId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a promoção" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allPromotions.map(promo => (
+                      <SelectItem key={promo.id} value={promo.id}>
+                        {promo.name || promo.prize_description}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Assunto *</Label>
+                <Select value={supportSubject} onValueChange={setSupportSubject}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o assunto" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Elogio">Elogio</SelectItem>
+                    <SelectItem value="Solicitação">Solicitação</SelectItem>
+                    <SelectItem value="Sugestão">Sugestão</SelectItem>
+                    <SelectItem value="Esclarecimento">Esclarecimento</SelectItem>
+                    <SelectItem value="Outros">Outros</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Mensagem *</Label>
+                <Textarea
+                  placeholder="Escreva sua mensagem..."
+                  value={supportMessage}
+                  onChange={(e) => setSupportMessage(e.target.value)}
+                  rows={4}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Anexo (opcional)</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="file"
+                    onChange={(e) => setSupportAttachment(e.target.files?.[0] || null)}
+                    className="flex-1"
+                  />
+                  {supportAttachment && (
+                    <Paperclip className="h-4 w-4 text-primary" />
+                  )}
+                </div>
+              </div>
+
+              <Button
+                onClick={handleSendSupportMessage}
+                disabled={sendingMessage}
+                className="w-full"
+                size="lg"
+              >
+                {sendingMessage ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Enviando...
+                  </>
+                ) : (
+                  <>
+                    <Send className="mr-2 h-4 w-4" />
+                    Enviar Mensagem
+                  </>
+                )}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* My Messages Dialog */}
+        <Dialog open={showMyMessages} onOpenChange={setShowMyMessages}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden bg-white">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Mail className="h-5 w-5 text-primary" />
+                Minhas Mensagens
+              </DialogTitle>
+            </DialogHeader>
+            <ScrollArea className="max-h-[70vh] pr-4">
+              {loadingMessages ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                </div>
+              ) : myMessages.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">Nenhuma mensagem enviada.</p>
+              ) : (
+                <div className="space-y-4">
+                  {myMessages.map((msg) => (
+                    <Card key={msg.id} className={msg.admin_reply ? 'border-primary/30' : ''}>
+                      <CardContent className="pt-4 space-y-2">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <Badge variant="outline">{msg.subject}</Badge>
+                            <p className="text-xs text-muted-foreground mt-1">{msg.promotion_name}</p>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(msg.created_at).toLocaleString('pt-BR')}
+                          </p>
+                        </div>
+                        <p className="text-sm">{msg.message}</p>
+                        {msg.attachment_url && (
+                          <a href={msg.attachment_url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary underline flex items-center gap-1">
+                            <Paperclip className="h-3 w-3" /> Anexo
+                          </a>
+                        )}
+                        {msg.admin_reply && (
+                          <div className="mt-3 p-3 bg-primary/5 rounded-lg border border-primary/20">
+                            <p className="text-xs font-semibold text-primary mb-1">Resposta do Suporte:</p>
+                            <p className="text-sm">{msg.admin_reply}</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {msg.admin_replied_at && new Date(msg.admin_replied_at).toLocaleString('pt-BR')}
+                            </p>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
           </DialogContent>
         </Dialog>
       </div>

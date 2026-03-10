@@ -110,9 +110,9 @@ export default function SponsorDashboard() {
 
       setSponsorData(data);
       
-      // Load promotions
       await loadPromotions(session.user.id);
       await loadPendingPromotions(session.user.id);
+      await loadMyMessages(session.user.id);
     } catch (error: any) {
       toast({
         title: "Erro",

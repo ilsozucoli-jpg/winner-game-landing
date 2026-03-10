@@ -311,6 +311,62 @@ export type Database = {
           },
         ]
       }
+      support_messages: {
+        Row: {
+          admin_replied_at: string | null
+          admin_reply: string | null
+          attachment_url: string | null
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          promotion_id: string
+          promotion_name: string
+          sponsor_registration_id: string
+          subject: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_replied_at?: string | null
+          admin_reply?: string | null
+          attachment_url?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          promotion_id: string
+          promotion_name: string
+          sponsor_registration_id: string
+          subject: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_replied_at?: string | null
+          admin_reply?: string | null
+          attachment_url?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          promotion_id?: string
+          promotion_name?: string
+          sponsor_registration_id?: string
+          subject?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_messages_sponsor_registration_id_fkey"
+            columns: ["sponsor_registration_id"]
+            isOneToOne: false
+            referencedRelation: "sponsor_registrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       system_settings: {
         Row: {
           created_at: string | null

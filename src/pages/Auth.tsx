@@ -125,7 +125,7 @@ export default function Auth() {
           }
         }
       } else {
-        const { error } = await supabase.auth.signUp({
+        const { data: signUpData, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -135,6 +135,17 @@ export default function Auth() {
 
         if (error) throw error;
         
+        // Check if user already exists (signUp returns user but no session for existing users)
+        if (signUpData?.user?.identities?.length === 0) {
+          toast({
+            title: "Usuário já cadastrado",
+            description: "Este email já está registrado. Faça login.",
+            variant: "destructive",
+          });
+          setIsLogin(true);
+          return;
+        }
+
         toast({
           title: "Cadastro realizado!",
           description: "Faça login para continuar.",

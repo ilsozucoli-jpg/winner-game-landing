@@ -90,7 +90,19 @@ export default function Auth() {
           password,
         });
 
-        if (error) throw error;
+        if (error) {
+          // If user not found, switch to signup mode
+          if (error.message?.includes('Invalid login credentials')) {
+            toast({
+              title: "Usuário não encontrado",
+              description: "Crie sua conta para começar.",
+            });
+            setIsLogin(false);
+            setLoading(false);
+            return;
+          }
+          throw error;
+        }
         
         toast({
           title: "Login realizado!",

@@ -166,6 +166,91 @@ export default function SponsorDashboard() {
     }
   };
 
+  const loadMyMessages = async (userId: string) => {
+    setLoadingMessages(true);
+    try {
+      const { data, error } = await supabase
+        .from('support_messages')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setMyMessages(data || []);
+    } catch (error) {
+      console.error('Error loading messages:', error);
+    } finally {
+      setLoadingMessages(false);
+    }
+  };
+
+  const handleSendSupportMessage = async () => {
+    if (!supportPromotionId || !supportSubject || !supportMessage.trim()) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Preencha todos os campos obrigatórios.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSendingMessage(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Não autenticado');
+
+      let attachmentUrl = null;
+      if (supportAttachment) {
+        const fileExt = supportAttachment.name.split('.').pop();
+        const filePath = `${session.user.id}/${Date.now()}.${fileExt}`;
+        const { error: uploadError } = await supabase.storage
+          .from('message-attachments')
+          .upload(filePath, supportAttachment);
+        if (uploadError) throw uploadError;
+        const { data: urlData } = supabase.storage
+          .from('message-attachments')
+          .getPublicUrl(filePath);
+        attachmentUrl = urlData.publicUrl;
+      }
+
+      const selectedPromo = allPromotions.find(p => p.id === supportPromotionId);
+
+      const { error } = await supabase
+        .from('support_messages')
+        .insert({
+          user_id: session.user.id,
+          sponsor_registration_id: sponsorData.id,
+          promotion_id: supportPromotionId,
+          promotion_name: selectedPromo?.name || 'Promoção',
+          subject: supportSubject,
+          message: supportMessage.trim(),
+          attachment_url: attachmentUrl,
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Mensagem enviada!",
+        description: "Sua mensagem foi enviada para a equipe de suporte.",
+      });
+
+      setShowSupportDialog(false);
+      setSupportSubject('');
+      setSupportMessage('');
+      setSupportPromotionId('');
+      setSupportAttachment(null);
+      await loadMyMessages(session.user.id);
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSendingMessage(false);
+    }
+  };
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate('/');

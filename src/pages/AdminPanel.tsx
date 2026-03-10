@@ -144,6 +144,86 @@ export default function AdminPanel() {
     }
   };
 
+  const loadPendingMessagesCount = async () => {
+    try {
+      const { count } = await supabase
+        .from('support_messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_read', false);
+      setPendingMessagesCount(count || 0);
+    } catch (error) {
+      console.error('Erro ao carregar contagem de mensagens:', error);
+    }
+  };
+
+  const loadSupportMessages = async () => {
+    setLoadingMessages(true);
+    try {
+      const { data, error } = await supabase
+        .from('support_messages')
+        .select('*')
+        .order('is_read', { ascending: true })
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setSupportMessages(data || []);
+    } catch (error: any) {
+      toast({
+        title: "Erro ao carregar mensagens",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingMessages(false);
+    }
+  };
+
+  const handleMarkAsRead = async (messageId: string) => {
+    try {
+      const { error } = await supabase
+        .from('support_messages')
+        .update({ is_read: true })
+        .eq('id', messageId);
+
+      if (error) throw error;
+      loadSupportMessages();
+      loadPendingMessagesCount();
+    } catch (error: any) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const handleSendAdminReply = async () => {
+    if (!selectedMessage || !adminReply.trim()) {
+      toast({ title: "Erro", description: "Escreva uma resposta.", variant: "destructive" });
+      return;
+    }
+
+    setSendingReply(true);
+    try {
+      const { error } = await supabase
+        .from('support_messages')
+        .update({
+          admin_reply: adminReply.trim(),
+          admin_replied_at: new Date().toISOString(),
+          is_read: true,
+        })
+        .eq('id', selectedMessage.id);
+
+      if (error) throw error;
+
+      toast({ title: "Resposta enviada!", description: "A resposta foi registrada com sucesso." });
+      setSelectedMessage(null);
+      setAdminReply('');
+      loadSupportMessages();
+      loadPendingMessagesCount();
+    } catch (error: any) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    } finally {
+      setSendingReply(false);
+    }
+  };
+
   const handleSaveConfig = async () => {
     setSavingConfig(true);
     try {

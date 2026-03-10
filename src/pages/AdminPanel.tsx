@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, UserPlus, Trash2, MapPin, Shield, Building } from 'lucide-react';
+import { Loader2, UserPlus, Trash2, MapPin, Shield, Building, MessageSquare, Paperclip } from 'lucide-react';
 import { createAdminUser } from '@/lib/adminUtils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';

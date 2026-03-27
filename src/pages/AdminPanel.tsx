@@ -87,6 +87,11 @@ export default function AdminPanel() {
   const [selectedPromotionForSponsor, setSelectedPromotionForSponsor] = useState<any | null>(null);
   const [updatingSponsor, setUpdatingSponsor] = useState(false);
   const [registrationsStatusFilter, setRegistrationsStatusFilter] = useState<'all' | 'approved' | 'pending' | 'rejected'>('all');
+
+  const [currentAdminId, setCurrentAdminId] = useState('');
+  const [currentAdminName, setCurrentAdminName] = useState('');
+  const [currentAdminEmail, setCurrentAdminEmail] = useState('');
+  const [updatingCurrentAdmin, setUpdatingCurrentAdmin] = useState(false);
   const [registrationsCityFilter, setRegistrationsCityFilter] = useState('');
   const [registrationsCurrentPage, setRegistrationsCurrentPage] = useState(1);
   const [editingAddress, setEditingAddress] = useState(false);
@@ -114,6 +119,7 @@ export default function AdminPanel() {
 
   useEffect(() => {
     checkAdminStatus();
+    loadCurrentAdminProfile();
     loadPromotionsSetting();
     loadPromotionLimits();
     loadPendingMessagesCount();
@@ -898,6 +904,67 @@ export default function AdminPanel() {
     }
   };
 
+  const loadCurrentAdminProfile = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session || !session.user) return;
+
+      setCurrentAdminId(session.user.id);
+      setCurrentAdminEmail(session.user.email || '');
+
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('name,email')
+        .eq('id', session.user.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        throw error;
+      }
+
+      if (profile) {
+        setCurrentAdminName(profile.name || '');
+        setCurrentAdminEmail(profile.email || session.user.email || '');
+      }
+    } catch (error: any) {
+      console.error('Erro ao carregar dados do admin logado:', error);
+    }
+  };
+
+  const handleUpdateCurrentAdmin = async () => {
+    if (!currentAdminId) {
+      toast({ title: 'Erro', description: 'Admin não encontrado.', variant: 'destructive' });
+      return;
+    }
+
+    setUpdatingCurrentAdmin(true);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Sessão expirada. Faça login novamente.');
+
+      if (currentAdminEmail && currentAdminEmail !== session.user.email) {
+        const { error: updateUserError } = await supabase.auth.updateUser({ email: currentAdminEmail });
+        if (updateUserError) throw updateUserError;
+      }
+
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ name: currentAdminName, email: currentAdminEmail })
+        .eq('id', currentAdminId);
+
+      if (profileError) throw profileError;
+
+      toast({ title: 'Sucesso!', description: 'Dados do admin atualizados com sucesso.' });
+      loadUsers();
+      loadCurrentAdminProfile();
+    } catch (error: any) {
+      toast({ title: 'Erro', description: error.message, variant: 'destructive' });
+    } finally {
+      setUpdatingCurrentAdmin(false);
+    }
+  };
+
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreatingUser(true);
@@ -1394,10 +1461,49 @@ export default function AdminPanel() {
         {activeSection === 'users' && (
             <Card>
               <CardHeader>
-                <CardTitle>Criar Usuário Admin</CardTitle>
-                <CardDescription>Crie novos usuários com privilégios administrativos</CardDescription>
+                <CardTitle>Administradores</CardTitle>
+                <CardDescription>Gerencie administradores e atualize seus dados</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-6">
+                <div className="border border-border rounded-lg p-4 bg-muted">
+                  <h3 className="text-lg font-semibold mb-2">Atualizar dados do admin logado</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Nome</label>
+                      <Input
+                        type="text"
+                        value={currentAdminName}
+                        onChange={(e) => setCurrentAdminName(e.target.value)}
+                        placeholder="Seu nome"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Email</label>
+                      <Input
+                        type="email"
+                        value={currentAdminEmail}
+                        onChange={(e) => setCurrentAdminEmail(e.target.value)}
+                        placeholder="admin@example.com"
+                      />
+                    </div>
+                    <Button
+                      onClick={handleUpdateCurrentAdmin}
+                      disabled={updatingCurrentAdmin}
+                      variant="secondary"
+                      className="w-full"
+                    >
+                      {updatingCurrentAdmin ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Atualizando...
+                        </>
+                      ) : (
+                        'Atualizar meus dados'
+                      )}
+                    </Button>
+                  </div>
+                </div>
+
                 <form onSubmit={handleCreateUser} className="space-y-6">
                   <div>
                     <label className="block text-sm font-medium mb-2">Email</label>

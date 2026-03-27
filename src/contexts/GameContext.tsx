@@ -34,6 +34,8 @@ interface GameContextType {
   addStagePoints: (stage: number, points: number) => void;
   wheelPoints: number[];
   addWheelPoints: (stage: number, points: number) => void;
+  isStageCompleted: (stage: number) => boolean;
+  getNextAvailableStage: () => number | null;
   resetGame: () => void;
 }
 
@@ -67,6 +69,19 @@ export function GameProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const isStageCompleted = (stage: number) => {
+    return stagePoints[stage] > 0 || wheelPoints[stage] > 0;
+  };
+
+  const getNextAvailableStage = () => {
+    for (let i = 0; i < stagePoints.length; i++) {
+      if (!isStageCompleted(i)) {
+        return i;
+      }
+    }
+    return null; // Todas as etapas estão completas
+  };
+
   const resetGame = () => {
     setTotalPoints(0);
     setCurrentStage(0);
@@ -89,6 +104,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
         addStagePoints,
         wheelPoints,
         addWheelPoints,
+        isStageCompleted,
+        getNextAvailableStage,
         resetGame,
       }}
     >

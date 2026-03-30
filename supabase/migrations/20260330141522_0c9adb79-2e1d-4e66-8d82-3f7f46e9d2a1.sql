@@ -101,3 +101,39 @@ CREATE TRIGGER update_game_play_updated_at
   BEFORE UPDATE ON public.game_play
   FOR EACH ROW
   EXECUTE FUNCTION public.update_updated_at_column();
+
+INSERT INTO public.game_play (
+  id,
+  game_token,
+  user_id,
+  sponsor_id,
+  current_stage,
+  total_points,
+  stage_points,
+  stage_tokens,
+  status,
+  started_at,
+  completed_at,
+  created_at,
+  updated_at
+)
+SELECT
+  gen_random_uuid(),
+  'test-game-token-0001',
+  u.id,
+  (SELECT id FROM public.sponsors ORDER BY created_at LIMIT 1),
+  9,
+  1187,
+  ARRAY[120,95,110,105,98,130,140,112,127,150]::integer[],
+  ARRAY[
+    'token-stage-1','token-stage-2','token-stage-3','token-stage-4','token-stage-5',
+    'token-stage-6','token-stage-7','token-stage-8','token-stage-9','token-stage-10'
+  ]::text[],
+  'completed',
+  now() - interval '10 minutes',
+  now(),
+  now(),
+  now()
+FROM auth.users u
+LIMIT 1
+ON CONFLICT (game_token) DO NOTHING;

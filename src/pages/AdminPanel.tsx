@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,7 @@ import { createAdminUser } from '@/lib/adminUtils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Settings, Users, UserX, Key, List, Zap, Store, CheckCircle, XCircle, Cog, Gamepad } from 'lucide-react';
+import { Settings, Users, UserX, Key, List, Zap, Store, CheckCircle, XCircle, Cog, Gamepad, ChevronUp, ChevronDown } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -88,6 +88,7 @@ export default function AdminPanel() {
   const [gamePlayEntries, setGamePlayEntries] = useState<any[]>([]);
   const [selectedGamePlay, setSelectedGamePlay] = useState<any | null>(null);
   const [loadingGamePlayEntries, setLoadingGamePlayEntries] = useState(false);
+  const gamePlayStageScrollRef = useRef<HTMLDivElement | null>(null);
   const [loadingPendingPromotions, setLoadingPendingPromotions] = useState(false);
   const [approvingPromotion, setApprovingPromotion] = useState(false);
   const [selectedPendingPromotion, setSelectedPendingPromotion] = useState<any | null>(null);
@@ -1896,26 +1897,57 @@ export default function AdminPanel() {
                         <CardTitle>Jogadas por etapa</CardTitle>
                       </CardHeader>
                       <CardContent className="p-0">
-                        <ScrollArea className="max-h-[320px]">
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Etapa</TableHead>
-                                <TableHead>Pontos</TableHead>
-                                <TableHead>Token da etapa</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {(selectedGamePlay.stage_points || []).map((points: any, index: number) => (
-                                <TableRow key={index}>
-                                  <TableCell>{index + 1}</TableCell>
-                                  <TableCell>{points}</TableCell>
-                                  <TableCell>{selectedGamePlay.stage_tokens?.[index] || '-'}</TableCell>
+                        <div className="relative">
+                          <div className="absolute right-3 top-3 z-20 flex flex-col gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (gamePlayStageScrollRef.current) {
+                                  gamePlayStageScrollRef.current.scrollBy({ top: -140, behavior: 'smooth' });
+                                }
+                              }}
+                              className="w-10 h-10 rounded-full bg-black/50 text-white shadow-lg hover:bg-black/70 transition"
+                              aria-label="Rolar para cima"
+                            >
+                              <ChevronUp className="mx-auto" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (gamePlayStageScrollRef.current) {
+                                  gamePlayStageScrollRef.current.scrollBy({ top: 140, behavior: 'smooth' });
+                                }
+                              }}
+                              className="w-10 h-10 rounded-full bg-black/50 text-white shadow-lg hover:bg-black/70 transition"
+                              aria-label="Rolar para baixo"
+                            >
+                              <ChevronDown className="mx-auto" />
+                            </button>
+                          </div>
+                          <div
+                            ref={gamePlayStageScrollRef}
+                            className="max-h-[320px] overflow-y-auto"
+                          >
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Etapa</TableHead>
+                                  <TableHead>Pontos</TableHead>
+                                  <TableHead>Token da etapa</TableHead>
                                 </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </ScrollArea>
+                              </TableHeader>
+                              <TableBody>
+                                {(selectedGamePlay.stage_points || []).map((points: any, index: number) => (
+                                  <TableRow key={index}>
+                                    <TableCell>{index + 1}</TableCell>
+                                    <TableCell>{points}</TableCell>
+                                    <TableCell>{selectedGamePlay.stage_tokens?.[index] || '-'}</TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        </div>
                       </CardContent>
                     </Card>
                   </CardContent>

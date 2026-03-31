@@ -22,7 +22,7 @@ export default function GameStage() {
   const { stage } = useParams<{ stage: string }>();
   const stageNumber = parseInt(stage || '1') - 1;
   const navigate = useNavigate();
-  const { addPoints, addStagePoints, userData, setUserData, setSelectedSponsor } = useGame();
+  const { addPoints, addStagePoints, userData, setUserData, setSelectedSponsor, isStageCompleted, getNextAvailableStage } = useGame();
   const { toast } = useToast();
   const { playsToday, maxDailyPlays, remainingPlays, isBlocked, showWarning, loading: limitLoading } = useDailyPlayLimit(userData?.name);
   
@@ -31,6 +31,7 @@ export default function GameStage() {
   const [timer, setTimer] = useState(0);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [challengeComplete, seteChallengeComplete] = useState(false);
+  const [stageAlreadyCompleted, setStageAlreadyCompleted] = useState(false);
 
   useEffect(() => {
     // Check for test mode
@@ -50,6 +51,13 @@ export default function GameStage() {
       navigate('/register');
     }
   }, [userData, navigate, setUserData, setSelectedSponsor]);
+
+  useEffect(() => {
+    // Verificar se a etapa atual já foi completada
+    if (isStageCompleted(stageNumber)) {
+      setStageAlreadyCompleted(true);
+    }
+  }, [stageNumber, isStageCompleted]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -140,6 +148,20 @@ export default function GameStage() {
     }
   };
 
+  const handleGoToNextAvailableStage = () => {
+    const nextStage = getNextAvailableStage();
+    if (nextStage !== null) {
+      navigate(`/stage/${nextStage + 1}`);
+      setStageAlreadyCompleted(false);
+      setShowWheel(true);
+      setShowChallenge(false);
+      setTimer(0);
+      seteChallengeComplete(false);
+    } else {
+      navigate('/results');
+    }
+  };
+
   // If blocked, show daily limit reached message
   if (!limitLoading && isBlocked && stageNumber === 0) {
     return (
@@ -188,6 +210,45 @@ export default function GameStage() {
               className="w-full"
             >
               VOLTAR AO INÍCIO
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // If stage already completed, show message
+  if (stageAlreadyCompleted) {
+    const nextStage = getNextAvailableStage();
+    return (
+      <div className="min-h-screen bg-background p-6">
+        <div className="max-w-2xl mx-auto space-y-6">
+          <div className="flex justify-end gap-2">
+            <SettingsMenu />
+          </div>
+          <div className="text-center">
+            <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-2">
+              Winning Game
+            </h1>
+            <p className="text-lg text-muted-foreground">Etapa {stageNumber + 1} de 5</p>
+          </div>
+
+          <SponsorBanner />
+          <PointsDisplay />
+
+          <div className="bg-card border-2 border-orange-500 rounded-lg p-8 space-y-6 text-center animate-bounce-in">
+            <AlertTriangle className="w-20 h-20 text-orange-500 mx-auto" />
+            <h2 className="text-2xl font-bold text-foreground">Etapa já finalizada</h2>
+            <p className="text-muted-foreground text-lg">
+              Você já completou esta etapa. Siga para a próxima etapa disponível.
+            </p>
+            <Button
+              variant="game"
+              size="xl"
+              onClick={handleGoToNextAvailableStage}
+              className="w-full"
+            >
+              {nextStage !== null ? `IR PARA ETAPA ${nextStage + 1}` : 'VER RESULTADOS'}
             </Button>
           </div>
         </div>

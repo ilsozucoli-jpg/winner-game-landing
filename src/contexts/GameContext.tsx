@@ -75,6 +75,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setCurrentStage(0);
     setStagePoints([0, 0, 0, 0, 0]);
     setWheelPoints([0, 0, 0, 0, 0]);
+    setGamePlayId(null);
   };
 
   return (

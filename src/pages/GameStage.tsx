@@ -164,6 +164,8 @@ export default function GameStage() {
     setIsTimerRunning(false);
     
     if (score > 0) {
+      if (checkViolation(score, timer)) return;
+
       addPoints(score);
       addStagePoints(stageNumber, score);
       

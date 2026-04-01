@@ -21,11 +21,15 @@ export default function AdminPanel() {
   const { toast } = useToast();
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [currentAdminId, setCurrentAdminId] = useState<string | null>(null);
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserPassword, setNewUserPassword] = useState('');
   const [creatingUser, setCreatingUser] = useState(false);
   const [users, setUsers] = useState<any[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [editingAdminId, setEditingAdminId] = useState<string | null>(null);
+  const [editingAdminName, setEditingAdminName] = useState('');
+  const [savingAdminProfile, setSavingAdminProfile] = useState(false);
   const [userListSearchQuery, setUserListSearchQuery] = useState('');
   const [userListCurrentPage, setUserListCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
@@ -1148,6 +1152,8 @@ export default function AdminPanel() {
       }
 
       setIsAdmin(true);
+      setCurrentAdminId(session.user.id);
+      loadUsers();
     } catch (error) {
       navigate('/');
     } finally {
@@ -1239,6 +1245,45 @@ export default function AdminPanel() {
       });
     } finally {
       setCreatingUser(false);
+    }
+  };
+
+  const handleSaveAdminProfile = async () => {
+    if (!currentAdminId || !editingAdminId || editingAdminId !== currentAdminId) {
+      toast({
+        title: "Erro",
+        description: "Você só pode editar seu próprio cadastro.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!editingAdminName.trim()) {
+      toast({
+        title: "Erro",
+        description: "Nome não pode ficar vazio.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSavingAdminProfile(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ name: editingAdminName.trim() })
+        .eq('id', currentAdminId);
+
+      if (error) throw error;
+
+      toast({ title: "Sucesso!", description: "Seu cadastro foi atualizado." });
+      setEditingAdminId(null);
+      setEditingAdminName('');
+      loadUsers();
+    } catch (error: any) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    } finally {
+      setSavingAdminProfile(false);
     }
   };
 
@@ -1445,7 +1490,7 @@ export default function AdminPanel() {
     { id: 'pending-promotions', label: 'Promoções Pendentes', icon: CheckCircle, color: 'bg-yellow-500 hover:bg-yellow-600' },
     { id: 'sponsors-list', label: 'Promoções', icon: Users, color: 'bg-indigo-500 hover:bg-indigo-600' },
     { id: 'registrations', label: 'Patrocinadores', icon: Store, color: 'bg-orange-500 hover:bg-orange-600' },
-    { id: 'users', label: 'Administradores', icon: UserPlus, color: 'bg-green-500 hover:bg-green-600' },
+    { id: 'users', label: 'Administradores', icon: Users, color: 'bg-green-500 hover:bg-green-600' },
     { id: 'delete', label: 'Excluir Usuário', icon: UserX, color: 'bg-red-500 hover:bg-red-600' },
     { id: 'password', label: 'Mudar Senha', icon: Key, color: 'bg-amber-500 hover:bg-amber-600' },
     { id: 'list', label: 'Lista Usuários', icon: List, color: 'bg-purple-500 hover:bg-purple-600' },
@@ -1508,7 +1553,7 @@ export default function AdminPanel() {
                     navigate('/create-promotion');
                   } else {
                     setActiveSection(button.id as any);
-                    if (button.id === 'list') loadUsers();
+                    if (button.id === 'users' || button.id === 'list') loadUsers();
                     if (button.id === 'sponsors-list') loadSponsors();
                     if (button.id === 'registrations') loadSponsorRegistrations();
                     if (button.id === 'pending-promotions') loadPendingPromotions();
@@ -2024,93 +2069,135 @@ export default function AdminPanel() {
         )}
 
         {activeSection === 'users' && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Administradores</CardTitle>
-                <CardDescription>Gerencie administradores e atualize seus dados</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="border border-border rounded-lg p-4 bg-muted">
-                  <h3 className="text-lg font-semibold mb-2">Atualizar dados do admin logado</h3>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Nome</label>
-                      <Input
-                        type="text"
-                        value={currentAdminName}
-                        onChange={(e) => setCurrentAdminName(e.target.value)}
-                        placeholder="Seu nome"
-                      />
-                    </div>
+            <>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Administradores</CardTitle>
+                  <CardDescription>Crie novos usuários com privilégios administrativos e veja a lista de admins cadastrados.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleCreateUser} className="space-y-6">
                     <div>
                       <label className="block text-sm font-medium mb-2">Email</label>
                       <Input
                         type="email"
-                        value={currentAdminEmail}
-                        onChange={(e) => setCurrentAdminEmail(e.target.value)}
+                        value={newUserEmail}
+                        onChange={(e) => setNewUserEmail(e.target.value)}
                         placeholder="admin@example.com"
+                        required
                       />
                     </div>
-                    <Button
-                      onClick={handleUpdateCurrentAdmin}
-                      disabled={updatingCurrentAdmin}
-                      variant="secondary"
-                      className="w-full"
-                    >
-                      {updatingCurrentAdmin ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Atualizando...
-                        </>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Senha</label>
+                      <Input
+                        type="password"
+                        value={newUserPassword}
+                        onChange={(e) => setNewUserPassword(e.target.value)}
+                        placeholder="Senha forte"
+                        required
+                        minLength={6}
+                      />
+                    </div>
+                    <div className="flex gap-4">
+                      <Button type="submit" disabled={creatingUser} variant="game" size="xl" className="flex-1">
+                        {creatingUser ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Criando...
+                          </>
+                        ) : (
+                          <>
+                            <UserPlus className="mr-2 h-4 w-4" />
+                            Criar Admin
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </form>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Admins cadastrados</CardTitle>
+                  <CardDescription>Veja todos os administradores. Somente você pode editar seu próprio cadastro.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {loadingUsers ? (
+                    <div className="flex justify-center p-8">
+                      <Loader2 className="h-8 w-8 animate-spin" />
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {users.filter(u => (u.roles || []).includes('admin')).length === 0 ? (
+                        <p className="text-center text-muted-foreground p-8">Nenhum administrador encontrado.</p>
                       ) : (
-                        'Atualizar meus dados'
+                        users.filter(u => (u.roles || []).includes('admin')).map((user) => {
+                          const isCurrentAdmin = user.id === currentAdminId;
+                          return (
+                            <div key={user.id} className="border border-border rounded-lg p-4">
+                              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                <div>
+                                  <p className="font-medium">{user.email || 'Email não cadastrado'}</p>
+                                  <p className="text-sm text-muted-foreground">{user.name || 'Sem nome'}</p>
+                                  <p className="text-xs text-muted-foreground mt-1">Cadastrado em: {new Date(user.created_at).toLocaleDateString('pt-BR')}</p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Badge>Admin</Badge>
+                                  {isCurrentAdmin && (
+                                    <Button
+                                      size="sm"
+                                      onClick={() => {
+                                        setEditingAdminId(user.id);
+                                        setEditingAdminName(user.name || '');
+                                      }}
+                                    >
+                                      Editar meu cadastro
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+
+                              {isCurrentAdmin && editingAdminId === user.id && (
+                                <div className="mt-4 space-y-3">
+                                  <div>
+                                    <Label>Nome</Label>
+                                    <Input
+                                      value={editingAdminName}
+                                      onChange={(e) => setEditingAdminName(e.target.value)}
+                                      placeholder="Digite seu nome"
+                                    />
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <Button
+                                      onClick={handleSaveAdminProfile}
+                                      disabled={savingAdminProfile}
+                                      size="sm"
+                                    >
+                                      {savingAdminProfile ? 'Salvando...' : 'Salvar alterações'}
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => {
+                                        setEditingAdminId(null);
+                                        setEditingAdminName('');
+                                      }}
+                                    >
+                                      Cancelar
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })
                       )}
-                    </Button>
-                  </div>
-                </div>
-
-                <form onSubmit={handleCreateUser} className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Email</label>
-                    <Input
-                      type="email"
-                      value={newUserEmail}
-                      onChange={(e) => setNewUserEmail(e.target.value)}
-                      placeholder="admin@example.com"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Senha</label>
-                    <Input
-                      type="password"
-                      value={newUserPassword}
-                      onChange={(e) => setNewUserPassword(e.target.value)}
-                      placeholder="Senha forte"
-                      required
-                      minLength={6}
-                    />
-                  </div>
-
-                  <div className="flex gap-4">
-                    <Button type="submit" disabled={creatingUser} variant="game" size="xl" className="flex-1">
-                      {creatingUser ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Criando...
-                        </>
-                      ) : (
-                        <>
-                          <UserPlus className="mr-2 h-4 w-4" />
-                          Administradores
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </form>
-              </CardContent>
-            </Card>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </>
         )}
 
         {activeSection === 'pending-promotions' && (

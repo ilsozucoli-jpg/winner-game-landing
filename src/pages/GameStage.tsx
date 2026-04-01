@@ -169,6 +169,30 @@ export default function GameStage() {
     return false;
   };
 
+  // Update stage points in game_play
+  const trackStageEnd = async (points: number) => {
+    if (!gamePlayId) return;
+    try {
+      const { data: currentPlay } = await supabase
+        .from('game_play')
+        .select('stage_points')
+        .eq('id', gamePlayId)
+        .single();
+      
+      if (currentPlay) {
+        const stagePointsArr = [...(currentPlay.stage_points as number[])];
+        stagePointsArr[stageNumber] = points;
+        
+        await supabase
+          .from('game_play')
+          .update({ stage_points: stagePointsArr })
+          .eq('id', gamePlayId);
+      }
+    } catch (error) {
+      console.error('Error tracking stage end:', error);
+    }
+  };
+
   const handleChallengeComplete = (success: boolean = true) => {
     setIsTimerRunning(false);
     
@@ -181,6 +205,7 @@ export default function GameStage() {
 
       addPoints(totalPoints);
       addStagePoints(stageNumber, totalPoints);
+      trackStageEnd(totalPoints);
       
       toast({
         title: "🎯 Etapa Concluída!",
@@ -188,6 +213,7 @@ export default function GameStage() {
         className: "bg-success text-success-foreground",
       });
     } else {
+      trackStageEnd(0);
       toast({
         title: "Etapa Não Concluída",
         description: "Você não pontuou nesta etapa. Continue para a próxima!",
@@ -206,6 +232,7 @@ export default function GameStage() {
 
       addPoints(score);
       addStagePoints(stageNumber, score);
+      trackStageEnd(score);
       
       toast({
         title: "🎯 Etapa Concluída!",
@@ -213,6 +240,7 @@ export default function GameStage() {
         className: "bg-success text-success-foreground",
       });
     } else {
+      trackStageEnd(0);
       toast({
         title: "Etapa Não Concluída",
         description: "Você não pontuou nesta etapa. Continue para a próxima!",

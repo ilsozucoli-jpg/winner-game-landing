@@ -17,6 +17,22 @@ export default function Results() {
   
   useGameMusic();
 
+  const finalizeGamePlay = async () => {
+    if (!gamePlayId) return;
+    try {
+      await supabase
+        .from('game_play')
+        .update({
+          total_points: totalPoints,
+          completed_at: new Date().toISOString(),
+          status: 'completed',
+        })
+        .eq('id', gamePlayId);
+    } catch (error) {
+      console.error('Error finalizing game play:', error);
+    }
+  };
+
   useEffect(() => {
     if (!userData) {
       navigate('/register');

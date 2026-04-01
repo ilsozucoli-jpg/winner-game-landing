@@ -99,10 +99,36 @@ export default function GameStage() {
     }
   }, [showWarning, stageNumber, limitLoading]);
 
+  const triggerViolation = () => {
+    setShowViolationDialog(true);
+    setIsTimerRunning(false);
+    setTimeout(() => {
+      resetGame();
+      navigate('/sponsor-selection');
+    }, 15000);
+  };
+
+  const handleViolationOk = () => {
+    setShowViolationDialog(false);
+    resetGame();
+    navigate('/sponsor-selection');
+  };
+
   const handleWheelComplete = () => {
     setShowWheel(false);
     setShowChallenge(true);
     setIsTimerRunning(true);
+  };
+
+  const checkViolation = (points: number, timeUsed: number): boolean => {
+    const stageNum = stageNumber + 1;
+    const param = gameParams[stageNum];
+    if (!param) return false;
+    if (points > param.max_score || timeUsed > param.max_time_seconds) {
+      triggerViolation();
+      return true;
+    }
+    return false;
   };
 
   const handleChallengeComplete = (success: boolean = true) => {
@@ -113,6 +139,8 @@ export default function GameStage() {
       const timeBonus = Math.floor((30 - timer) * 5);
       const totalPoints = Math.max(basePoints + timeBonus, basePoints);
       
+      if (checkViolation(totalPoints, timer)) return;
+
       addPoints(totalPoints);
       addStagePoints(stageNumber, totalPoints);
       

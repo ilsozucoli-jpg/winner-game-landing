@@ -24,7 +24,7 @@ export function Footer() {
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const synthRef = useRef<Tone.Synth | null>(null);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const toggleMusic = async () => {
     if (isPlaying) {

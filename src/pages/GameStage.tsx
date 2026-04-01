@@ -60,8 +60,26 @@ export default function GameStage() {
     }
   }, [userData, navigate, setUserData, setSelectedSponsor]);
 
+  // Fetch game parameters
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    const fetchParams = async () => {
+      const { data } = await supabase
+        .from('game_parameters')
+        .select('stage_number, max_score, max_time_seconds, stage_type')
+        .eq('stage_type', 'game');
+      if (data) {
+        const map: Record<number, GameParam> = {};
+        data.forEach((p: any) => {
+          map[p.stage_number] = { max_score: p.max_score, max_time_seconds: p.max_time_seconds };
+        });
+        setGameParams(map);
+      }
+    };
+    fetchParams();
+  }, []);
+
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval>;
     if (isTimerRunning) {
       interval = setInterval(() => {
         setTimer(prev => prev + 1);

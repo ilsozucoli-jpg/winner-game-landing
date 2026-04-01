@@ -116,10 +116,46 @@ export default function GameStage() {
     navigate('/sponsor-selection');
   };
 
+  // Track stage start in game_play
+  const trackStageStart = async () => {
+    if (!gamePlayId || stageStartedRef.current) return;
+    stageStartedRef.current = true;
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const stageToken = generateStageToken(session.user.id, stageNumber + 1);
+      
+      // Update current_stage and stage token
+      const { data: currentPlay } = await supabase
+        .from('game_play')
+        .select('stage_tokens')
+        .eq('id', gamePlayId)
+        .single();
+      
+      if (currentPlay) {
+        const tokens = [...(currentPlay.stage_tokens as string[])];
+        tokens[stageNumber] = stageToken;
+        
+        await supabase
+          .from('game_play')
+          .update({
+            current_stage: stageNumber + 1,
+            stage_tokens: tokens,
+          })
+          .eq('id', gamePlayId);
+      }
+    } catch (error) {
+      console.error('Error tracking stage start:', error);
+    }
+  };
+
   const handleWheelComplete = () => {
     setShowWheel(false);
     setShowChallenge(true);
     setIsTimerRunning(true);
+    trackStageStart();
   };
 
   const checkViolation = (points: number, timeUsed: number): boolean => {

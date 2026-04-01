@@ -23,6 +23,7 @@ export default function Results() {
       return;
     }
     
+    finalizeGamePlay();
     saveGameResult();
   }, [userData, navigate]);
 

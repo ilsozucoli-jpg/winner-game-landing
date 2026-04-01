@@ -30,7 +30,7 @@ export default function GameStage() {
   const { stage } = useParams<{ stage: string }>();
   const stageNumber = parseInt(stage || '1') - 1;
   const navigate = useNavigate();
-  const { addPoints, addStagePoints, userData, setUserData, setSelectedSponsor, resetGame } = useGame();
+  const { addPoints, addStagePoints, userData, setUserData, setSelectedSponsor, resetGame, gamePlayId } = useGame();
   const { toast } = useToast();
   const { playsToday, maxDailyPlays, remainingPlays, isBlocked, showWarning, loading: limitLoading } = useDailyPlayLimit(userData?.name);
   
@@ -41,6 +41,7 @@ export default function GameStage() {
   const [challengeComplete, seteChallengeComplete] = useState(false);
   const [gameParams, setGameParams] = useState<Record<number, GameParam>>({});
   const [showViolationDialog, setShowViolationDialog] = useState(false);
+  const stageStartedRef = useRef(false);
 
   useEffect(() => {
     // Check for test mode

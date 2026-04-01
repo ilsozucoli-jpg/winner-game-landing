@@ -15,6 +15,8 @@ import { useDailyPlayLimit } from '@/hooks/useDailyPlayLimit';
 import { Timer, Target, LogOut, AlertTriangle, Clock } from 'lucide-react';
 import { SettingsMenu } from '@/components/SettingsMenu';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { supabase } from '@/integrations/supabase/client';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const STAGE_BASE_POINTS = [100, 200, 300, 400, 500];
 
@@ -22,7 +24,7 @@ export default function GameStage() {
   const { stage } = useParams<{ stage: string }>();
   const stageNumber = parseInt(stage || '1') - 1;
   const navigate = useNavigate();
-  const { addPoints, addStagePoints, userData, setUserData, setSelectedSponsor, isStageCompleted, getNextAvailableStage } = useGame();
+  const { addPoints, addStagePoints, userData, setUserData, setSelectedSponsor, isStageCompleted, getNextAvailableStage, resetGame } = useGame();
   const { toast } = useToast();
   const { playsToday, maxDailyPlays, remainingPlays, isBlocked, showWarning, loading: limitLoading } = useDailyPlayLimit(userData?.name);
   
@@ -32,6 +34,8 @@ export default function GameStage() {
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [challengeComplete, seteChallengeComplete] = useState(false);
   const [stageAlreadyCompleted, setStageAlreadyCompleted] = useState(false);
+  const [showInconsistencyDialog, setShowInconsistencyDialog] = useState(false);
+  const [inconsistencyCountdown, setInconsistencyCountdown] = useState(15);
 
   useEffect(() => {
     // Check for test mode
@@ -80,19 +84,72 @@ export default function GameStage() {
     }
   }, [showWarning, stageNumber, limitLoading]);
 
+  const checkGameLimits = async (stage: number, points: number, time: number) => {
+    try {
+      const { data: params, error } = await supabase
+        .from('game_parameters')
+        .select('*')
+        .limit(1)
+        .single();
+
+      if (error || !params) return false;
+
+      const maxPointsKey = `max_points_stage_${stage}`;
+      const maxTimeKey = `max_time_stage_${stage}`;
+
+      const maxPoints = params[maxPointsKey];
+      const maxTime = params[maxTimeKey];
+
+      if ((maxPoints && points > maxPoints) || (maxTime && time > maxTime)) {
+        return true;
+      }
+    } catch (error) {
+      console.error('Error checking game limits:', error);
+    }
+    return false;
+  };
+
+  const handleInconsistencyDetected = () => {
+    setShowInconsistencyDialog(true);
+    setInconsistencyCountdown(15);
+
+    const countdownInterval = setInterval(() => {
+      setInconsistencyCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(countdownInterval);
+          handleResetGame();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const handleResetGame = () => {
+    resetGame();
+    navigate('/sponsor-selection');
+  };
+
   const handleWheelComplete = () => {
     setShowWheel(false);
     setShowChallenge(true);
     setIsTimerRunning(true);
   };
 
-  const handleChallengeComplete = (success: boolean = true) => {
+  const handleChallengeComplete = async (success: boolean = true) => {
     setIsTimerRunning(false);
     
     if (success) {
       const basePoints = STAGE_BASE_POINTS[stageNumber];
       const timeBonus = Math.floor((30 - timer) * 5);
       const totalPoints = Math.max(basePoints + timeBonus, basePoints);
+      
+      // Check game limits
+      const isInconsistent = await checkGameLimits(stageNumber, totalPoints, timer);
+      if (isInconsistent) {
+        handleInconsistencyDetected();
+        return;
+      }
       
       addPoints(totalPoints);
       addStagePoints(stageNumber, totalPoints);
@@ -113,10 +170,17 @@ export default function GameStage() {
     seteChallengeComplete(true);
   };
 
-  const handleMinesweeperComplete = (score: number) => {
+  const handleMinesweeperComplete = async (score: number) => {
     setIsTimerRunning(false);
     
     if (score > 0) {
+      // Check game limits
+      const isInconsistent = await checkGameLimits(stageNumber, score, timer);
+      if (isInconsistent) {
+        handleInconsistencyDetected();
+        return;
+      }
+      
       addPoints(score);
       addStagePoints(stageNumber, score);
       
@@ -335,6 +399,27 @@ export default function GameStage() {
             </Button>
           </div>
         )}
+
+        <Dialog open={showInconsistencyDialog} onOpenChange={() => {}}>
+          <DialogContent className="bg-yellow-100 border-yellow-500">
+            <DialogHeader>
+              <DialogTitle className="text-red-600 text-center text-xl font-bold">
+                Parâmetros de jogo inconsistentes, o jogo será reiniciado.
+              </DialogTitle>
+              <DialogDescription className="text-center text-red-600">
+                Redirecionando em {inconsistencyCountdown} segundos...
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-center">
+              <Button
+                onClick={handleResetGame}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                OK
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
       </div>
     </div>

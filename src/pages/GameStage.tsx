@@ -252,6 +252,7 @@ export default function GameStage() {
   };
 
   const handleNextStage = () => {
+    stageStartedRef.current = false;
     if (stageNumber < 4) {
       navigate(`/stage/${stageNumber + 2}`);
       setShowWheel(true);

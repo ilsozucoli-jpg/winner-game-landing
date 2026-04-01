@@ -171,14 +171,39 @@ export default function SponsorSelection() {
     setSelecting(true);
     
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        navigate('/auth');
+        return;
+      }
+
+      const userId = session.user.id;
+      const gameToken = generateGameToken(userId, sponsor.id);
+
+      // Create game_play record
+      const { data: gamePlay, error: gpError } = await supabase
+        .from('game_play')
+        .insert({
+          user_id: userId,
+          sponsor_id: sponsor.id,
+          game_token: gameToken,
+          started_at: new Date().toISOString(),
+          status: 'in_progress',
+          current_stage: 0,
+        })
+        .select('id')
+        .single();
+
+      if (gpError) throw gpError;
+
       setSelectedSponsor(sponsor);
+      setGamePlayId(gamePlay.id);
       
       toast({
         title: "Patrocinador Selecionado!",
         description: `Você escolheu ${sponsor.name}`,
       });
 
-      // Navegar para a primeira etapa do jogo
       navigate('/stage/1');
     } catch (error: any) {
       toast({
@@ -187,8 +212,8 @@ export default function SponsorSelection() {
         variant: "destructive",
       });
     } finally {
-    setSelecting(false);
-    setShowMap(false);
+      setSelecting(false);
+      setShowMap(false);
     }
   };
 

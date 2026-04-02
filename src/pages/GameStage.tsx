@@ -116,7 +116,7 @@ export default function GameStage() {
     navigate('/sponsor-selection');
   };
 
-  // Track stage start in game_play
+  // Track stage start in game_play (game challenges use odd indices: 1, 3, 5, 7, 9)
   const trackStageStart = async () => {
     if (!gamePlayId || stageStartedRef.current) return;
     stageStartedRef.current = true;
@@ -125,7 +125,8 @@ export default function GameStage() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      const stageToken = generateStageToken(session.user.id, stageNumber + 1);
+      const gameIndex = stageNumber * 2 + 1; // Game uses odd indices: 1, 3, 5, 7, 9
+      const stageToken = generateStageToken(session.user.id, gameIndex);
       
       // Update current_stage and stage token
       const { data: currentPlay } = await supabase
@@ -136,12 +137,12 @@ export default function GameStage() {
       
       if (currentPlay) {
         const tokens = [...(currentPlay.stage_tokens as string[])];
-        tokens[stageNumber] = stageToken;
+        tokens[gameIndex] = stageToken;
         
         await supabase
           .from('game_play')
           .update({
-            current_stage: stageNumber + 1,
+            current_stage: gameIndex,
             stage_tokens: tokens,
           })
           .eq('id', gamePlayId);
@@ -169,10 +170,11 @@ export default function GameStage() {
     return false;
   };
 
-  // Update stage points in game_play
+  // Update stage points in game_play (game challenges use odd indices: 1, 3, 5, 7, 9)
   const trackStageEnd = async (points: number) => {
     if (!gamePlayId) return;
     try {
+      const gameIndex = stageNumber * 2 + 1;
       const { data: currentPlay } = await supabase
         .from('game_play')
         .select('stage_points')
@@ -181,7 +183,7 @@ export default function GameStage() {
       
       if (currentPlay) {
         const stagePointsArr = [...(currentPlay.stage_points as number[])];
-        stagePointsArr[stageNumber] = points;
+        stagePointsArr[gameIndex] = points;
         
         await supabase
           .from('game_play')

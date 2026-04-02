@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useGame } from '@/contexts/GameContext';
+import { supabase } from '@/integrations/supabase/client';
+import { generateStageToken } from '@/lib/gameTokens';
 
 const WHEEL_VALUES = [500, 300, 800, 100, 200, 600, 1000, 700, 100, 500, 600, 1000];
 
@@ -8,14 +10,75 @@ export function WheelOfFortune({ onComplete, stage }: { onComplete: () => void; 
   const [isSpinning, setIsSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
   const [showExplosion, setShowExplosion] = useState(false);
-  const { addPoints, addWheelPoints, selectedSponsor } = useGame();
+  const { addPoints, addWheelPoints, selectedSponsor, gamePlayId } = useGame();
   const { toast } = useToast();
+
+  // Track wheel stage start in game_play
+  const trackWheelStart = async () => {
+    if (!gamePlayId) return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const wheelIndex = stage * 2; // Wheel uses even indices: 0, 2, 4, 6, 8
+      const stageToken = generateStageToken(session.user.id, wheelIndex);
+
+      const { data: currentPlay } = await supabase
+        .from('game_play')
+        .select('stage_tokens')
+        .eq('id', gamePlayId)
+        .single();
+
+      if (currentPlay) {
+        const tokens = [...(currentPlay.stage_tokens as string[])];
+        tokens[wheelIndex] = stageToken;
+
+        await supabase
+          .from('game_play')
+          .update({
+            current_stage: wheelIndex,
+            stage_tokens: tokens,
+          })
+          .eq('id', gamePlayId);
+      }
+    } catch (error) {
+      console.error('Error tracking wheel start:', error);
+    }
+  };
+
+  // Track wheel points in game_play
+  const trackWheelPoints = async (points: number) => {
+    if (!gamePlayId) return;
+    try {
+      const wheelIndex = stage * 2;
+      const { data: currentPlay } = await supabase
+        .from('game_play')
+        .select('stage_points')
+        .eq('id', gamePlayId)
+        .single();
+
+      if (currentPlay) {
+        const stagePointsArr = [...(currentPlay.stage_points as number[])];
+        stagePointsArr[wheelIndex] = points;
+
+        await supabase
+          .from('game_play')
+          .update({ stage_points: stagePointsArr })
+          .eq('id', gamePlayId);
+      }
+    } catch (error) {
+      console.error('Error tracking wheel points:', error);
+    }
+  };
 
   const spinWheel = () => {
     if (isSpinning) return;
 
     setIsSpinning(true);
     setShowExplosion(true);
+
+    // Track wheel start
+    trackWheelStart();
     
     // Remove explosion effect after animation
     setTimeout(() => setShowExplosion(false), 1000);
@@ -35,6 +98,7 @@ export function WheelOfFortune({ onComplete, stage }: { onComplete: () => void; 
       
       addPoints(points);
       addWheelPoints(stage, points);
+      trackWheelPoints(points);
       toast({
         title: "🎉 Parabéns!",
         description: `Você ganhou ${points} pontos!`,

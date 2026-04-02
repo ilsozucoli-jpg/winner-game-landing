@@ -205,7 +205,7 @@ export default function Results() {
           <Award className="w-16 h-16 text-primary-foreground mx-auto" />
           <h2 className="text-2xl font-bold text-primary-foreground">Pontuação Final</h2>
           <div className="text-6xl font-bold text-primary-foreground animate-pulse-glow">
-            {totalPoints.toLocaleString('pt-BR')}
+            {gameTotalPoints.toLocaleString('pt-BR')}
           </div>
           <p className="text-primary-foreground/80">pontos conquistados</p>
         </div>

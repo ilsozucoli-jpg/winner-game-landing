@@ -274,7 +274,7 @@ export default function GameStage() {
           </div>
           <div className="text-center">
             <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-2">
-              Winning Game
+              Winner Game
             </h1>
           </div>
 
@@ -327,7 +327,7 @@ export default function GameStage() {
         </div>
         <div className="text-center">
           <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-2">
-            Winning Game
+            Winner Game
           </h1>
           <p className="text-lg text-muted-foreground">Etapa {stageNumber + 1} de 5</p>
         </div>

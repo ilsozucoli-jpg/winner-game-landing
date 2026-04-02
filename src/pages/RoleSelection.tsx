@@ -154,7 +154,7 @@ export default function RoleSelection() {
             Escolha seu perfil
           </CardTitle>
           <CardDescription className="text-lg">
-            Como você deseja participar do Winning Game?
+            Como você deseja participar do Winner Game?
           </CardDescription>
         </CardHeader>
         <CardContent>

@@ -98,6 +98,7 @@ export function WheelOfFortune({ onComplete, stage }: { onComplete: () => void; 
       
       addPoints(points);
       addWheelPoints(stage, points);
+      trackWheelPoints(points);
       toast({
         title: "🎉 Parabéns!",
         description: `Você ganhou ${points} pontos!`,

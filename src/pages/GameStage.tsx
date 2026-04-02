@@ -170,10 +170,11 @@ export default function GameStage() {
     return false;
   };
 
-  // Update stage points in game_play
+  // Update stage points in game_play (game challenges use odd indices: 1, 3, 5, 7, 9)
   const trackStageEnd = async (points: number) => {
     if (!gamePlayId) return;
     try {
+      const gameIndex = stageNumber * 2 + 1;
       const { data: currentPlay } = await supabase
         .from('game_play')
         .select('stage_points')
@@ -182,7 +183,7 @@ export default function GameStage() {
       
       if (currentPlay) {
         const stagePointsArr = [...(currentPlay.stage_points as number[])];
-        stagePointsArr[stageNumber] = points;
+        stagePointsArr[gameIndex] = points;
         
         await supabase
           .from('game_play')

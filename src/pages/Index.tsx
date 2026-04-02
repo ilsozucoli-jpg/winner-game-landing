@@ -18,9 +18,17 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-purple-light overflow-hidden relative">
+    <div className="min-h-screen overflow-hidden relative">
+      {/* Winner background image - low resolution, 50% transparency */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-50 blur-[2px]"
+        style={{ backgroundImage: `url(${winnerBackground})` }}
+      />
+      {/* Gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-purple-light/70" />
+
       {/* Animated sparkles background */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-[1]">
         {[...Array(30)].map((_, i) => (
           <div
             key={i}
@@ -39,15 +47,6 @@ const Index = () => {
       {/* Main content */}
       <main className="relative z-10 container mx-auto px-4 py-8 md:py-16">
         <div className="flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] space-y-8 md:space-y-12">
-          
-          {/* Logo */}
-          <div className="animate-float">
-            <img 
-              src={winnerBackground} 
-              alt="Winner Game Logo" 
-              className="w-full max-w-md md:max-w-2xl h-auto rounded-2xl"
-            />
-          </div>
 
           {/* Description */}
           <div className="text-center max-w-2xl space-y-4 animate-fade-in" style={{ animationDelay: "0.3s" }}>

@@ -168,7 +168,7 @@ export default function Results() {
             player_phone: userData.phone,
             player_email: userData.email,
             sponsor_id: selectedSponsor.id,
-            points: totalPoints,
+            points: totalPts,
             completed_at: new Date().toISOString(),
             user_id: userId,
           });

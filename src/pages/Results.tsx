@@ -141,11 +141,11 @@ export default function Results() {
       if (existingResults && existingResults.length > 0) {
         // Update only if current score is higher
         const existingResult = existingResults[0];
-        if (totalPoints > existingResult.points) {
+        if (totalPts > existingResult.points) {
           const { error: updateError } = await supabase
             .from('game_results')
             .update({
-              points: totalPoints,
+              points: totalPts,
               completed_at: new Date().toISOString(),
               player_phone: userData.phone,
               player_email: userData.email,

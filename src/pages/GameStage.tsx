@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { SponsorBanner } from '@/components/SponsorBanner';
@@ -16,15 +16,29 @@ import { Timer, Target, LogOut, AlertTriangle, Clock } from 'lucide-react';
 import { SettingsMenu } from '@/components/SettingsMenu';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
+<<<<<<< main
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+=======
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { generateStageToken } from '@/lib/gameTokens';
+>>>>>>> main
 
 const STAGE_BASE_POINTS = [100, 200, 300, 400, 500];
+
+interface GameParam {
+  max_score: number;
+  max_time_seconds: number;
+}
 
 export default function GameStage() {
   const { stage } = useParams<{ stage: string }>();
   const stageNumber = parseInt(stage || '1') - 1;
   const navigate = useNavigate();
+<<<<<<< main
   const { addPoints, addStagePoints, userData, setUserData, setSelectedSponsor, isStageCompleted, getNextAvailableStage, resetGame } = useGame();
+=======
+  const { addPoints, addStagePoints, userData, setUserData, setSelectedSponsor, resetGame, gamePlayId } = useGame();
+>>>>>>> main
   const { toast } = useToast();
   const { playsToday, maxDailyPlays, remainingPlays, isBlocked, showWarning, loading: limitLoading } = useDailyPlayLimit(userData?.name);
   
@@ -33,9 +47,15 @@ export default function GameStage() {
   const [timer, setTimer] = useState(0);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [challengeComplete, seteChallengeComplete] = useState(false);
+<<<<<<< main
   const [stageAlreadyCompleted, setStageAlreadyCompleted] = useState(false);
   const [showInconsistencyDialog, setShowInconsistencyDialog] = useState(false);
   const [inconsistencyCountdown, setInconsistencyCountdown] = useState(15);
+=======
+  const [gameParams, setGameParams] = useState<Record<number, GameParam>>({});
+  const [showViolationDialog, setShowViolationDialog] = useState(false);
+  const stageStartedRef = useRef(false);
+>>>>>>> main
 
   useEffect(() => {
     // Check for test mode
@@ -56,7 +76,26 @@ export default function GameStage() {
     }
   }, [userData, navigate, setUserData, setSelectedSponsor]);
 
+  // Fetch game parameters
   useEffect(() => {
+    const fetchParams = async () => {
+      const { data } = await supabase
+        .from('game_parameters')
+        .select('stage_number, max_score, max_time_seconds, stage_type')
+        .eq('stage_type', 'game');
+      if (data) {
+        const map: Record<number, GameParam> = {};
+        data.forEach((p: any) => {
+          map[p.stage_number] = { max_score: p.max_score, max_time_seconds: p.max_time_seconds };
+        });
+        setGameParams(map);
+      }
+    };
+    fetchParams();
+  }, []);
+
+  useEffect(() => {
+<<<<<<< main
     // Verificar se a etapa atual já foi completada
     if (isStageCompleted(stageNumber)) {
       setStageAlreadyCompleted(true);
@@ -65,6 +104,9 @@ export default function GameStage() {
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
+=======
+    let interval: ReturnType<typeof setInterval>;
+>>>>>>> main
     if (isTimerRunning) {
       interval = setInterval(() => {
         setTimer(prev => prev + 1);
@@ -84,6 +126,7 @@ export default function GameStage() {
     }
   }, [showWarning, stageNumber, limitLoading]);
 
+<<<<<<< main
   const checkGameLimits = async (stage: number, points: number, time: number) => {
     try {
       const { data: params, error } = await supabase
@@ -128,12 +171,100 @@ export default function GameStage() {
   const handleResetGame = () => {
     resetGame();
     navigate('/sponsor-selection');
+=======
+  const triggerViolation = () => {
+    setShowViolationDialog(true);
+    setIsTimerRunning(false);
+    setTimeout(() => {
+      resetGame();
+      navigate('/sponsor-selection');
+    }, 15000);
+  };
+
+  const handleViolationOk = () => {
+    setShowViolationDialog(false);
+    resetGame();
+    navigate('/sponsor-selection');
+  };
+
+  // Track stage start in game_play (game challenges use odd indices: 1, 3, 5, 7, 9)
+  const trackStageStart = async () => {
+    if (!gamePlayId || stageStartedRef.current) return;
+    stageStartedRef.current = true;
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const gameIndex = stageNumber * 2 + 1; // Game uses odd indices: 1, 3, 5, 7, 9
+      const stageToken = generateStageToken(session.user.id, gameIndex);
+      
+      // Update current_stage and stage token
+      const { data: currentPlay } = await supabase
+        .from('game_play')
+        .select('stage_tokens')
+        .eq('id', gamePlayId)
+        .single();
+      
+      if (currentPlay) {
+        const tokens = [...(currentPlay.stage_tokens as string[])];
+        tokens[gameIndex] = stageToken;
+        
+        await supabase
+          .from('game_play')
+          .update({
+            current_stage: gameIndex,
+            stage_tokens: tokens,
+          })
+          .eq('id', gamePlayId);
+      }
+    } catch (error) {
+      console.error('Error tracking stage start:', error);
+    }
+>>>>>>> main
   };
 
   const handleWheelComplete = () => {
     setShowWheel(false);
     setShowChallenge(true);
     setIsTimerRunning(true);
+    trackStageStart();
+  };
+
+  const checkViolation = (points: number, timeUsed: number): boolean => {
+    const stageNum = stageNumber + 1;
+    const param = gameParams[stageNum];
+    if (!param) return false;
+    if (points > param.max_score || timeUsed > param.max_time_seconds) {
+      triggerViolation();
+      return true;
+    }
+    return false;
+  };
+
+  // Update stage points in game_play (game challenges use odd indices: 1, 3, 5, 7, 9)
+  const trackStageEnd = async (points: number) => {
+    if (!gamePlayId) return;
+    try {
+      const gameIndex = stageNumber * 2 + 1;
+      const { data: currentPlay } = await supabase
+        .from('game_play')
+        .select('stage_points')
+        .eq('id', gamePlayId)
+        .single();
+      
+      if (currentPlay) {
+        const stagePointsArr = [...(currentPlay.stage_points as number[])];
+        stagePointsArr[gameIndex] = points;
+        
+        await supabase
+          .from('game_play')
+          .update({ stage_points: stagePointsArr })
+          .eq('id', gamePlayId);
+      }
+    } catch (error) {
+      console.error('Error tracking stage end:', error);
+    }
   };
 
   const handleChallengeComplete = async (success: boolean = true) => {
@@ -144,6 +275,7 @@ export default function GameStage() {
       const timeBonus = Math.floor((30 - timer) * 5);
       const totalPoints = Math.max(basePoints + timeBonus, basePoints);
       
+<<<<<<< main
       // Check game limits
       const isInconsistent = await checkGameLimits(stageNumber, totalPoints, timer);
       if (isInconsistent) {
@@ -151,8 +283,13 @@ export default function GameStage() {
         return;
       }
       
+=======
+      if (checkViolation(totalPoints, timer)) return;
+
+>>>>>>> main
       addPoints(totalPoints);
       addStagePoints(stageNumber, totalPoints);
+      trackStageEnd(totalPoints);
       
       toast({
         title: "🎯 Etapa Concluída!",
@@ -160,6 +297,7 @@ export default function GameStage() {
         className: "bg-success text-success-foreground",
       });
     } else {
+      trackStageEnd(0);
       toast({
         title: "Etapa Não Concluída",
         description: "Você não pontuou nesta etapa. Continue para a próxima!",
@@ -174,6 +312,7 @@ export default function GameStage() {
     setIsTimerRunning(false);
     
     if (score > 0) {
+<<<<<<< main
       // Check game limits
       const isInconsistent = await checkGameLimits(stageNumber, score, timer);
       if (isInconsistent) {
@@ -181,8 +320,13 @@ export default function GameStage() {
         return;
       }
       
+=======
+      if (checkViolation(score, timer)) return;
+
+>>>>>>> main
       addPoints(score);
       addStagePoints(stageNumber, score);
+      trackStageEnd(score);
       
       toast({
         title: "🎯 Etapa Concluída!",
@@ -190,6 +334,7 @@ export default function GameStage() {
         className: "bg-success text-success-foreground",
       });
     } else {
+      trackStageEnd(0);
       toast({
         title: "Etapa Não Concluída",
         description: "Você não pontuou nesta etapa. Continue para a próxima!",
@@ -201,6 +346,7 @@ export default function GameStage() {
   };
 
   const handleNextStage = () => {
+    stageStartedRef.current = false;
     if (stageNumber < 4) {
       navigate(`/stage/${stageNumber + 2}`);
       setShowWheel(true);
@@ -236,7 +382,7 @@ export default function GameStage() {
           </div>
           <div className="text-center">
             <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-2">
-              Winning Game
+              Winner Game
             </h1>
           </div>
 
@@ -328,7 +474,7 @@ export default function GameStage() {
         </div>
         <div className="text-center">
           <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-2">
-            Winning Game
+            Winner Game
           </h1>
           <p className="text-lg text-muted-foreground">Etapa {stageNumber + 1} de 5</p>
         </div>
@@ -400,6 +546,7 @@ export default function GameStage() {
           </div>
         )}
 
+<<<<<<< main
         <Dialog open={showInconsistencyDialog} onOpenChange={() => {}}>
           <DialogContent className="bg-yellow-100 border-yellow-500">
             <DialogHeader>
@@ -414,6 +561,21 @@ export default function GameStage() {
               <Button
                 onClick={handleResetGame}
                 className="bg-red-600 hover:bg-red-700 text-white"
+=======
+        {/* Violation Dialog */}
+        <Dialog open={showViolationDialog} onOpenChange={() => {}}>
+          <DialogContent className="bg-yellow-100 border-2 border-yellow-500 max-w-md [&>button]:hidden">
+            <div className="text-center space-y-6 py-4">
+              <AlertTriangle className="w-16 h-16 text-destructive mx-auto" />
+              <p className="text-xl font-bold text-destructive">
+                Parâmetros de jogo inconsistentes, o jogo será reiniciado.
+              </p>
+              <Button
+                variant="outline"
+                size="xl"
+                onClick={handleViolationOk}
+                className="w-full border-yellow-500 text-yellow-800 hover:bg-yellow-200"
+>>>>>>> main
               >
                 OK
               </Button>

@@ -23,7 +23,7 @@ export default function SplashScreen() {
         
         <div className="space-y-4">
           <h1 className="text-6xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-            Winning Game
+            Winner Game
           </h1>
           <p className="text-xl text-muted-foreground animate-pulse">
             Prepare-se para vencer!

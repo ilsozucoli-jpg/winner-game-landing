@@ -14,6 +14,95 @@ export type Database = {
   }
   public: {
     Tables: {
+      game_parameters: {
+        Row: {
+          created_at: string | null
+          id: string
+          max_score: number
+          max_time_seconds: number
+          stage_number: number
+          stage_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          max_score: number
+          max_time_seconds: number
+          stage_number: number
+          stage_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          max_score?: number
+          max_time_seconds?: number
+          stage_number?: number
+          stage_type?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      game_play: {
+        Row: {
+          abandon_reason: string | null
+          completed_at: string | null
+          created_at: string
+          current_stage: number
+          game_token: string
+          id: string
+          sponsor_id: string | null
+          stage_points: number[]
+          stage_tokens: string[]
+          started_at: string
+          status: string
+          total_points: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          abandon_reason?: string | null
+          completed_at?: string | null
+          created_at?: string
+          current_stage?: number
+          game_token: string
+          id?: string
+          sponsor_id?: string | null
+          stage_points?: number[]
+          stage_tokens?: string[]
+          started_at?: string
+          status?: string
+          total_points?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          abandon_reason?: string | null
+          completed_at?: string | null
+          created_at?: string
+          current_stage?: number
+          game_token?: string
+          id?: string
+          sponsor_id?: string | null
+          stage_points?: number[]
+          stage_tokens?: string[]
+          started_at?: string
+          status?: string
+          total_points?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_play_sponsor_id_fkey"
+            columns: ["sponsor_id"]
+            isOneToOne: false
+            referencedRelation: "sponsors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       game_results: {
         Row: {
           completed_at: string

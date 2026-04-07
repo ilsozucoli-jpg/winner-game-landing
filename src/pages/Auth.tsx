@@ -180,7 +180,7 @@ export default function Auth() {
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-            Winning Game
+            Winner Game
           </h1>
           <p className="mt-2 text-muted-foreground">
             {isLogin ? 'Faça login para continuar' : 'Crie sua conta'}

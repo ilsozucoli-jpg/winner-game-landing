@@ -154,7 +154,7 @@ export default function Register() {
         <div className="text-center space-y-2">
           <Trophy className="w-16 h-16 text-primary mx-auto animate-pulse-glow" />
           <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-            Winning Game
+            Winner Game
           </h1>
         </div>
 

@@ -11,11 +11,60 @@ import { FixedHeader } from '@/components/FixedHeader';
 
 export default function Results() {
   const navigate = useNavigate();
-  const { userData, totalPoints, stagePoints, wheelPoints, resetGame, selectedSponsor } = useGame();
+  const { userData, resetGame, selectedSponsor, gamePlayId } = useGame();
   const [rankingPosition, setRankingPosition] = useState<number | null>(null);
   const [isClassified, setIsClassified] = useState<boolean | null>(null);
+  const [gameStagePoints, setGameStagePoints] = useState<number[]>([]);
+  const [gameWheelPoints, setGameWheelPoints] = useState<number[]>([]);
+  const [gameTotalPoints, setGameTotalPoints] = useState(0);
   
   useGameMusic();
+
+  const fetchGamePlayData = async () => {
+    if (!gamePlayId) return;
+    try {
+      const { data, error } = await supabase
+        .from('game_play')
+        .select('stage_points')
+        .eq('id', gamePlayId)
+        .single();
+
+      if (error) throw error;
+      if (data) {
+        const sp = data.stage_points as number[];
+        // Wheel points at even indices: 0, 2, 4, 6, 8
+        const wheels = [sp[0] || 0, sp[2] || 0, sp[4] || 0, sp[6] || 0, sp[8] || 0];
+        // Game points at odd indices: 1, 3, 5, 7, 9
+        const games = [sp[1] || 0, sp[3] || 0, sp[5] || 0, sp[7] || 0, sp[9] || 0];
+        
+        setGameWheelPoints(wheels);
+        setGameStagePoints(games);
+        
+        const total = sp.reduce((sum, val) => sum + (val || 0), 0);
+        setGameTotalPoints(total);
+        return total;
+      }
+    } catch (error) {
+      console.error('Error fetching game play data:', error);
+    }
+    return 0;
+  };
+
+  const finalizeGamePlay = async (total: number) => {
+    if (!gamePlayId) return;
+    try {
+      await supabase
+        .from('game_play')
+        .update({
+          total_points: total,
+          completed_at: new Date().toISOString(),
+          status: 'completed',
+        })
+        .eq('id', gamePlayId);
+    } catch (error) {
+      console.error('Error finalizing game play:', error);
+    }
+  };
 
   useEffect(() => {
     if (!userData) {
@@ -23,7 +72,16 @@ export default function Results() {
       return;
     }
     
-    saveGameResult();
+    const initResults = async () => {
+      const total = await fetchGamePlayData();
+      if (total !== undefined && total > 0) {
+        await finalizeGamePlay(total);
+        await saveGameResult(total);
+      } else {
+        await checkRankingPosition();
+      }
+    };
+    initResults();
   }, [userData, navigate]);
 
   const checkRankingPosition = async () => {
@@ -57,11 +115,11 @@ export default function Results() {
     }
   };
 
-  const saveGameResult = async () => {
+  const saveGameResult = async (totalPts: number) => {
     if (!userData || !selectedSponsor) return;
 
     // Don't save zero-point results (e.g. when daily limit was exceeded)
-    if (totalPoints <= 0) {
+    if (totalPts <= 0) {
       await checkRankingPosition();
       return;
     }
@@ -83,11 +141,11 @@ export default function Results() {
       if (existingResults && existingResults.length > 0) {
         // Update only if current score is higher
         const existingResult = existingResults[0];
-        if (totalPoints > existingResult.points) {
+        if (totalPts > existingResult.points) {
           const { error: updateError } = await supabase
             .from('game_results')
             .update({
-              points: totalPoints,
+              points: totalPts,
               completed_at: new Date().toISOString(),
               player_phone: userData.phone,
               player_email: userData.email,
@@ -110,7 +168,7 @@ export default function Results() {
             player_phone: userData.phone,
             player_email: userData.email,
             sponsor_id: selectedSponsor.id,
-            points: totalPoints,
+            points: totalPts,
             completed_at: new Date().toISOString(),
             user_id: userId,
           });
@@ -147,7 +205,7 @@ export default function Results() {
           <Award className="w-16 h-16 text-primary-foreground mx-auto" />
           <h2 className="text-2xl font-bold text-primary-foreground">Pontuação Final</h2>
           <div className="text-6xl font-bold text-primary-foreground animate-pulse-glow">
-            {totalPoints.toLocaleString('pt-BR')}
+            {gameTotalPoints.toLocaleString('pt-BR')}
           </div>
           <p className="text-primary-foreground/80">pontos conquistados</p>
         </div>
@@ -190,7 +248,7 @@ export default function Results() {
           </h3>
           
           <div className="space-y-3">
-            {stagePoints.map((points, index) => (
+            {gameStagePoints.map((points, index) => (
               <div key={index} className="space-y-2">
                 <div className="flex justify-between items-center p-3 bg-white/90 rounded-lg border border-primary/20">
                   <span className="font-semibold text-foreground">Etapa {index + 1}</span>
@@ -198,7 +256,7 @@ export default function Results() {
                 </div>
                 <div className="flex justify-between items-center px-3 py-2 bg-white/70 rounded-lg border border-accent/20 text-sm">
                   <span className="text-foreground/70">Pontos da Roleta:</span>
-                  <span className="text-accent font-semibold">{wheelPoints[index].toLocaleString('pt-BR')} pts</span>
+                  <span className="text-accent font-semibold">{(gameWheelPoints[index] || 0).toLocaleString('pt-BR')} pts</span>
                 </div>
               </div>
             ))}

@@ -369,8 +369,8 @@ export default function AdminPanel() {
       if (error) throw error;
 
       const entries = data || [];
-      const playerIds = [...new Set(entries.map((entry: any) => entry.user_id).filter(Boolean))];
-      const sponsorIdsToFetch = [...new Set(entries.map((entry: any) => entry.sponsor_id).filter(Boolean))];
+      const playerIds = [...new Set(entries.map((entry: any) => entry.user_id).filter(Boolean))] as string[];
+      const sponsorIdsToFetch = [...new Set(entries.map((entry: any) => entry.sponsor_id).filter(Boolean))] as string[];
 
       const profilePromise = playerIds.length
         ? supabase.from('profiles').select('id,name,email').in('id', playerIds)
@@ -384,8 +384,8 @@ export default function AdminPanel() {
       if (profilesRes.error) throw profilesRes.error;
       if (sponsorsRes.error) throw sponsorsRes.error;
 
-      const profileMap = new Map((profilesRes.data || []).map((profile: any) => [profile.id, profile]));
-      const sponsorMap = new Map((sponsorsRes.data || []).map((sponsor: any) => [sponsor.id, sponsor]));
+      const profileMap = new Map<string, { id: string; name: string; email: string }>((profilesRes.data || []).map((profile: any) => [profile.id, profile]));
+      const sponsorMap = new Map<string, { id: string; name: string }>((sponsorsRes.data || []).map((sponsor: any) => [sponsor.id, sponsor]));
 
       const enriched = entries.map((entry: any) => ({
         ...entry,
@@ -1964,15 +1964,17 @@ export default function AdminPanel() {
                     <CardDescription>Visualize as informações completas do registro selecionado.</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div className="space-y-2 mb-4">
                       <div className="space-y-2">
                         <Label>Token do jogo</Label>
-                        <p>{selectedGamePlay.game_token}</p>
+                        <p className="break-all text-sm">{selectedGamePlay.game_token}</p>
                       </div>
                       <div className="space-y-2">
                         <Label>Token do usuário</Label>
-                        <p>{selectedGamePlay.user_id}</p>
+                        <p className="break-all text-sm">{selectedGamePlay.user_id}</p>
                       </div>
+                    </div>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>Promoção</Label>
                         <p>{selectedGamePlay.sponsor_name || selectedGamePlay.sponsor_id || '-'}</p>
